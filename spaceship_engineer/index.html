@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>우주선 정비 시뮬레이터 v4.9 (극악 난이도 및 전략 패치)</title>
+    <style>
+        :root {
+            --bg-color: #0d1a26;
+            --panel-color: #1e3d59;
+            --text-color: #e6e6fa;
+            --danger-color: #ff6666;
+            --success-color: #66ff66;
+            --accent-color: #ffcc00;
+            --info-color: #00bfff;
+        }
+
+        body {
+            font-family: 'Consolas', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #main-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 80%;
+            max-width: 600px;
+        }
+
+        /* Status Bar */
+        #status-bar {
+            background: var(--panel-color);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+        }
+        #action-count { color: var(--info-color); }
+
+        /* Faults Area */
+        #faults-area {
+            background: var(--panel-color);
+            padding: 15px;
+            border-radius: 8px;
+            min-height: 150px;
+        }
+        .fault-card {
+            background: #00000030;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-left: 5px solid var(--danger-color);
+            cursor: pointer;
+            transition: background 0.2s;
+            position: relative; 
+        }
+        .fault-card:hover {
+            background: #00000050;
+        }
+        .fault-info { font-size: 14px; margin-bottom: 5px; }
+        .difficulty { color: var(--accent-color); font-weight: bold; }
+        .system-name { font-weight: bold; }
+
+        /* System Danger/Reward Info */
+        .system-danger-info {
+            font-size: 12px;
+            margin-top: 5px;
+            padding: 3px 5px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .danger {
+            background: var(--danger-color);
+            color: var(--bg-color);
+        }
+        .reward {
+            background: var(--success-color);
+            color: var(--bg-color);
+        }
+        .warning {
+            background: var(--accent-color);
+            color: var(--bg-color);
+        }
+
+        /* Repair Options */
+        .repair-options {
+            margin-top: 5px;
+            display: flex;
+            gap: 5px;
+        }
+        .repair-btn {
+            padding: 5px 8px;
+            font-size: 12px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .emergency {
+            background: var(--danger-color);
+            color: white;
+        }
+        .blockade {
+            background: var(--info-color);
+            color: white;
+        }
+        .repair-btn:disabled {
+            opacity: 0.5;
+            cursor: default;
+        }
+
+
+        /* Next Turn Button */
+        #next-turn-btn {
+            padding: 10px;
+            font-size: 16px;
+            background: var(--success-color);
+            color: var(--bg-color);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        /* Log */
+        #log-area {
+            background: #00000080;
+            padding: 10px;
+            border-radius: 4px;
+            height: 80px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        .log-danger { color: var(--danger-color); }
+        .log-success { color: var(--success-color); }
+        .log-warning { color: var(--accent-color); }
+
+
+        /* QTE Overlay */
+        #qte-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            z-index: 100;
+        }
+        #qte-display {
+            background: var(--panel-color);
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            width: 350px;
+        }
+        #qte-timer-bar {
+            width: 100%; height: 10px; background: var(--danger-color); margin-bottom: 15px;
+            transition: width linear;
+        }
+        #qte-prompt {
+            font-size: 48px;
+            margin: 20px 0;
+            color: var(--accent-color);
+        }
+        #qte-message { font-size: 18px; color: var(--text-color); }
+
+        /* Timing Bar specific styles */
+        #timing-bar-container {
+            width: 80%; height: 30px; background: #333; margin: 20px auto; border-radius: 5px; overflow: hidden;
+            position: relative;
+        }
+        #timing-bar-green-zone {
+            position: absolute; height: 100%; background: var(--success-color); opacity: 0.7;
+        }
+        #timing-indicator {
+            position: absolute; top: 0; left: 0; width: 5px; height: 100%; background: var(--danger-color); 
+            animation-name: moveIndicator;
+            animation-iteration-count: infinite;
+            animation-timing-function: linear;
+            animation-direction: alternate;
+        }
+        @keyframes moveIndicator {
+            from { left: 0; }
+            to { left: calc(100% - 5px); }
+        }
+        #puzzle-answer {
+            color: var(--text-color);
+            background: var(--bg-color);
+            border: 1px solid var(--accent-color);
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>🚀 우주선 정비 시뮬레이터</h1>
+
+    <div id="main-container">
+        <div id="status-bar">
+            <div>❤️ 사기: <span id="hp-val">10</span></div>
+            <div>턴: <span id="turn-val">1</span></div>
+            <div>행동 횟수: <span id="action-count">3</span></div>
+        </div>
+
+        <div id="faults-area">
+            <h3>🚨 발생 고장 (클릭하여 수리 시작)</h3>
+            <div id="fault-list">
+                </div>
+            <button id="next-turn-btn" onclick="nextTurn()">턴 종료 (남은 행동 소모)</button>
+        </div>
+
+        <div id="log-area"></div>
+    </div>
+
+    <div id="qte-overlay">
+        <div id="qte-display">
+            
+            <div id="qte-timer-bar"></div>
+            
+            <div id="qte-message"></div>
+            
+            <div id="qte-content-area">
+                <div id="qte-prompt"></div>
+
+                <div id="timing-bar-container" style="display:none;">
+                    <div id="timing-bar-green-zone"></div>
+                    <div id="timing-indicator"></div>
+                </div>
+                
+                <div id="puzzle-input-container" style="display:none;">
+                    <p id="puzzle-question" style="font-size: 24px;"></p>
+                    <input type="number" id="puzzle-answer" style="font-size: 20px; padding: 5px; width: 100px; text-align: center; margin-top: 10px;">
+                    <button onclick="checkPuzzleAnswer()" style="padding: 10px; margin-left: 10px; background: var(--accent-color); border: none; border-radius: 5px; color: black; font-weight: bold;">확인</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Config ---
+        const WIN_TURN = 15; 
+        
+        // Sequence QTE 난이도별 총 시간 (ms)
+        const SEQUENCE_TIME_MAP = {
+            1: 2000, // 쉬움 (2.0초)
+            2: 2000, // 보통 (2.0초)
+            3: 2500  // 어려움 (2.5초)
+        };
+
+        const SYSTEM_DB = [
+            { name: "메인 엔진", icon: "🚀", qteType: 'sequence', difficulty: [3, 5, 7], failPenalty: 'HP_CRITICAL' }, 
+            { name: "산소 발생기", icon: "💨", qteType: 'timing', difficulty: [1, 2, 3], failPenalty: 'NONE' }, 
+            { name: "통신 장치", icon: "📡", qteType: 'sequence', difficulty: [4, 6, 8], failPenalty: 'ACTION_REDUCE' }, 
+            { name: "식량 배급", icon: "🍔", qteType: 'puzzle', difficulty: [1, 2, 3], successReward: 'HP_BONUS' } 
+        ];
+        
+        const KEY_POOL = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD'];
+
+        let gameState = {
+            hp: 10,
+            turn: 0,
+            maxActions: 3,
+            actionsLeft: 3,
+            faults: [], 
+            isQTEActive: false,
+            qteState: null,
+            maxQTEAttempts: 0
+        };
+        
+        let indicatorEl;
+        let qteTimer;
+        let qteTimerBarEl; 
+        let timingBarGreenZoneEl;
+
+        // --- Utility Functions ---
+        function d(sides) {
+            return Math.floor(Math.random() * sides) + 1;
+        }
+
+        function log(message, type = 'normal') {
+            const logArea = document.getElementById('log-area');
+            const div = document.createElement('div');
+            div.innerHTML = message;
+            if (type === 'danger') div.classList.add('log-danger');
+            if (type === 'success') div.classList.add('log-success');
+            if (type === 'warning') div.classList.add('log-warning');
+            logArea.prepend(div);
+            if (logArea.children.length > 10) {
+                logArea.removeChild(logArea.lastChild);
+            }
+        }
+        // --- Core Game Flow ---
+
+        function startGame() {
+            gameState.hp = 10;
+            gameState.turn = 0;
+            gameState.maxActions = 3;
+            gameState.actionsLeft = 3; 
+            gameState.faults = [];
+            
+            indicatorEl = document.getElementById('timing-indicator');
+            qteTimerBarEl = document.getElementById('qte-timer-bar'); 
+            timingBarGreenZoneEl = document.getElementById('timing-bar-green-zone');
+            
+            document.getElementById('fault-list').innerHTML = '';
+            document.getElementById('log-area').innerHTML = '';
+            log("🚀 우주선 정비 시뮬레이터 시작! 15턴 동안 살아남아 무사 귀환하세요.");
+            
+            nextTurn(); 
+        }
+
+        function nextTurn() {
+            if (gameState.turn >= WIN_TURN) {
+                log(`🎉 우주선 무사 귀환! ${WIN_TURN}턴 생존에 성공했습니다!`, 'success');
+                document.getElementById('next-turn-btn').disabled = true;
+                return;
+            }
+            if (checkGameOver()) return;
+            
+            gameState.turn++;
+            gameState.actionsLeft = gameState.maxActions;
+            
+            log(`==== 턴 ${gameState.turn} 시작 ====`);
+
+            // 1. Unrepaired Faults Damage & Base HP Drain
+            // 턴당 기본 소모 (사기 1 감소)
+            gameState.hp = Math.max(0, gameState.hp - 1);
+            log('💔 기본 비행 스트레스: 사기 1 감소.', 'danger');
+
+            // 미수리 패널티 상향: 고장 개수 N만큼 감소 (v4.7 반영)
+            const unrepairedCount = gameState.faults.filter(f => !f.isBlockaded).length;
+
+            if (unrepairedCount > 0) {
+                // 봉쇄되지 않은 고장 개수만큼 사기 감소 (N개일 때 N 감소)
+                gameState.hp -= unrepairedCount;
+                log(`💔 미수리된 고장 ${unrepairedCount}개로 인해 사기 ${unrepairedCount} 추가 감소.`, 'danger');
+            } else if (gameState.faults.length > 0) {
+                 log('🛡️ 모든 고장이 임시 봉쇄되어 추가 피해는 없습니다.');
+            } else {
+                 log('⭐ 고장 없음. 추가 피해 없음.');
+            }
+
+            // 봉쇄 상태 해제
+            gameState.faults.forEach(f => f.isBlockaded = false);
+
+
+            // 2. New Fault Generation (버그 수정: 최소 1개 보장)
+            const newFaultsCount = d(2); // 1 to 2 new faults
+            for (let i = 0; i < newFaultsCount; i++) {
+                generateFault();
+            }
+            
+            // 3. Action count reset
+            gameState.maxActions = 3; 
+
+            updateUI();
+        }
+
+        function generateFault() {
+            const systemIndex = Math.floor(Math.random() * SYSTEM_DB.length);
+            const system = SYSTEM_DB[systemIndex];
+            const difficultyLevel = d(3); 
+            
+            gameState.faults.push({
+                system: system,
+                difficulty: difficultyLevel,
+                id: Date.now() + Math.random(),
+                isBlockaded: false // 임시 봉쇄 상태 추가
+            });
+            log(`⚡ [${system.icon} ${system.name}] 고장 발생! 난이도 ${difficultyLevel}.`);
+        }
+
+        // --- UI & Rendering ---
+
+        function updateUI() {
+            document.getElementById('hp-val').innerText = gameState.hp;
+            document.getElementById('turn-val').innerText = `${gameState.turn}/${WIN_TURN}`;
+
+            document.getElementById('hp-val').style.color = gameState.hp <= 3 ? 'var(--danger-color)' : 'var(--text-color)';
+            
+            document.getElementById('action-count').innerText = gameState.actionsLeft;
+
+            renderFaults();
+            checkGameOver();
+        }
+
+        function renderFaults() {
+            const list = document.getElementById('fault-list');
+            list.innerHTML = '';
+            
+            const isActionsAvailable = gameState.actionsLeft > 0;
+            
+            if (gameState.faults.length === 0) {
+                list.innerHTML = '<div style="color:#aaa;">현재 활성 고장 없음.</div>';
+                document.getElementById('next-turn-btn').style.background = 'var(--success-color)';
+            } else {
+                 document.getElementById('next-turn-btn').style.background = (gameState.actionsLeft === 0) ? '#ff9800' : '#444';
+            }
+
+            gameState.faults.forEach((fault) => {
+                const card = document.createElement('div');
+                card.className = 'fault-card';
+                card.dataset.id = fault.id;
+                
+                if (fault.isBlockaded) {
+                    card.style.borderLeft = '5px solid var(--info-color)';
+                }
+
+                const difficultyText = ['쉬움', '보통', '어려움'][fault.difficulty - 1];
+                
+                let strategyInfoHTML = "";
+                if (fault.system.failPenalty === 'HP_CRITICAL') {
+                    strategyInfoHTML = '<span class="system-danger-info danger">🚨 실패 시 사기 2 감소</span>';
+                } else if (fault.system.failPenalty === 'ACTION_REDUCE') {
+                    strategyInfoHTML = '<span class="system-danger-info warning">⚠️ 실패 시 다음 턴 행동 감소</span>';
+                } else if (fault.system.successReward === 'HP_BONUS') {
+                     strategyInfoHTML = `<span class="system-danger-info reward">✨ 성공 시 사기 ${fault.difficulty} 회복</span>`;
+                }
+
+                // 카드 제목/난이도
+                card.innerHTML = `
+                    <div class="system-name">${fault.system.icon} ${fault.system.name} ${fault.isBlockaded ? '(봉쇄됨)' : ''}</div>
+                    <div class="fault-info">난이도: <span class="difficulty">${difficultyText} (${fault.difficulty})</span></div>
+                    ${strategyInfoHTML}
+                `;
+
+                // 전략적 수리 옵션 추가
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = 'repair-options';
+
+                // 1. 일반 수리 (1 Action)
+                const normalRepairBtn = document.createElement('button');
+                normalRepairBtn.className = 'repair-btn';
+                normalRepairBtn.innerText = '🛠️ 일반 수리 (1)';
+                normalRepairBtn.onclick = () => startRepair(fault.id, 'normal');
+                normalRepairBtn.disabled = !isActionsAvailable;
+                optionsDiv.appendChild(normalRepairBtn);
+                
+                // 2. 긴급 수리 (2 Actions)
+                const emergencyRepairBtn = document.createElement('button');
+                emergencyRepairBtn.className = 'repair-btn emergency';
+                emergencyRepairBtn.innerText = '🎲 긴급 수리 (2)';
+                emergencyRepairBtn.onclick = () => startRepair(fault.id, 'emergency');
+                emergencyRepairBtn.disabled = gameState.actionsLeft < 2;
+                optionsDiv.appendChild(emergencyRepairBtn);
+                
+                // 3. 임시 봉쇄 (1 Action)
+                const blockadeBtn = document.createElement('button');
+                blockadeBtn.className = 'repair-btn blockade';
+                blockadeBtn.innerText = '🔒 임시 봉쇄 (1)';
+                blockadeBtn.onclick = () => blockadeFault(fault.id);
+                blockadeBtn.disabled = !isActionsAvailable || fault.isBlockaded;
+                optionsDiv.appendChild(blockadeBtn);
+
+
+                card.appendChild(optionsDiv);
+                list.appendChild(card);
+                
+                // 일반 수리 버튼만 클릭 가능하도록 변경
+                card.onclick = null; 
+            });
+        }
+        
+        function checkGameOver() {
+            if (gameState.hp <= 0) {
+                log("🚨 승무원 사기 붕괴! 게임 오버. (F5로 재시작)", 'danger');
+                document.getElementById('next-turn-btn').disabled = true;
+                return true;
+            }
+            return false;
+        }
+
+
+        // --- Repair/QTE Logic ---
+
+        function startRepair(faultId, type) {
+            if (gameState.isQTEActive || checkGameOver()) return;
+
+            const faultIndex = gameState.faults.findIndex(f => f.id === faultId);
+            const fault = gameState.faults[faultIndex];
+            if (!fault) return;
+            
+            if (type === 'emergency' && gameState.actionsLeft < 2) return;
+            if (type === 'normal' && gameState.actionsLeft < 1) return;
+
+            if (type === 'emergency') {
+                gameState.actionsLeft -= 2;
+                log(`🎲 [${fault.system.name}] 긴급 수리 시도 (행동 2 소모). 성공률 60%...`);
+                
+                const roll = Math.random();
+                if (roll <= 0.6) {
+                    log(`🎉 긴급 수리 성공! (60% 확률) [${fault.system.name}] 제거.`, 'success');
+                    removeFault(faultIndex, true, fault);
+                } else {
+                    // 긴급 수리 실패는 기본 패널티만 적용
+                    gameState.hp = Math.max(0, gameState.hp - 1);
+                    log(`💥 긴급 수리 실패! 사기 1 감소.`, 'danger');
+                    gameState.faults[faultIndex].isBlockaded = false; // 혹시 봉쇄 상태였다면 해제
+                }
+                updateUI();
+            } else {
+                // Normal QTE Repair
+                log(`🛠️ [${fault.system.name}] 일반 수리 시작! (행동 1 소모)`);
+                gameState.isQTEActive = true;
+                gameState.actionsLeft--; 
+                document.getElementById('qte-overlay').style.display = 'flex';
+                
+                initQTE(fault, faultIndex);
+            }
+        }
+
+        function blockadeFault(faultId) {
+            if (gameState.actionsLeft < 1) return;
+            const faultIndex = gameState.faults.findIndex(f => f.id === faultId);
+            const fault = gameState.faults[faultIndex];
+            if (!fault || fault.isBlockaded) return;
+
+            gameState.actionsLeft -= 1;
+            gameState.faults[faultIndex].isBlockaded = true;
+            log(`🔒 [${fault.system.name}] 임시 봉쇄! 다음 턴 피해를 1회 막습니다. (행동 1 소모)`);
+            updateUI();
+        }
+
+
+        function initQTE(fault, faultIndex) {
+            
+            document.getElementById('qte-prompt').innerHTML = '';
+            document.getElementById('timing-bar-container').style.display = 'none';
+            document.getElementById('puzzle-input-container').style.display = 'none';
+            
+            qteTimerBarEl.style.display = 'none';
+            if (indicatorEl) indicatorEl.style.animation = 'none';
+
+
+            gameState.qteState = {
+                faultIndex: faultIndex,
+                system: fault.system,
+                difficulty: fault.difficulty, 
+                requiredInputs: [],
+                currentIndex: 0,
+                success: false,
+                puzzleAnswer: 0
+            };
+
+            const difficultyMultiplier = fault.system.difficulty[fault.difficulty - 1];
+            gameState.maxQTEAttempts = difficultyMultiplier;
+
+            if (fault.system.qteType === 'sequence') {
+                for (let i = 0; i < difficultyMultiplier; i++) {
+                    const key = KEY_POOL[Math.floor(Math.random() * KEY_POOL.length)];
+                    gameState.qteState.requiredInputs.push(key);
+                }
+                document.getElementById('qte-message').innerText = `[${difficultyMultiplier}회] 순서대로 입력하세요!`;
+                document.addEventListener('keydown', handleQTEInput);
+                renderQTEPrompt();
+                
+                qteTimerBarEl.style.display = 'block';
+                
+                const totalTime = SEQUENCE_TIME_MAP[fault.difficulty] || 1500;
+                startQTECountdown(totalTime); 
+            
+            } else if (fault.system.qteType === 'timing') {
+                document.getElementById('timing-bar-container').style.display = 'block';
+                document.getElementById('qte-message').innerText = `[${difficultyMultiplier}회] 녹색 영역에서 SPACE를 누르세요!`;
+                document.addEventListener('keydown', handleTimingInput);
+                startTimingMinigame(fault.difficulty);
+
+            } else if (fault.system.qteType === 'puzzle') {
+                document.getElementById('puzzle-input-container').style.display = 'block';
+                document.getElementById('qte-message').innerText = '배급 코드를 계산하세요!';
+                
+                qteTimerBarEl.style.display = 'block';
+                startPuzzleMinigame(fault.difficulty);
+            }
+
+            document.getElementById('next-turn-btn').disabled = true;
+        }
+        
+        // --- Sequence/Puzzle QTE Countdown ---
+        
+        function startQTECountdown(duration) {
+            clearTimeout(qteTimer); 
+            
+            qteTimerBarEl.style.transition = 'none';
+            qteTimerBarEl.style.width = '100%';
+            void qteTimerBarEl.offsetWidth; 
+            
+            qteTimerBarEl.style.transition = `width ${duration}ms linear`;
+            qteTimerBarEl.style.width = '0%';
+            
+            qteTimer = setTimeout(qteFailedByTime, duration);
+        }
+
+        function renderQTEPrompt() {
+            const state = gameState.qteState;
+            const promptEl = document.getElementById('qte-prompt');
+            
+            const remaining = state.requiredInputs.slice(state.currentIndex).map(k => {
+                const keyName = k.replace('Key', '').replace('Arrow', '');
+                const highlightStyle = (k === state.requiredInputs[state.currentIndex]) ? 'color: var(--accent-color); font-weight: bold;' : 'color: #777;';
+                return `<span style="${highlightStyle}">${keyName}</span>`;
+            }).join(' ');
+
+            promptEl.innerHTML = remaining;
+        }
+        
+        function handleQTEInput(event) {
+            if (!gameState.isQTEActive) return;
+            const state = gameState.qteState;
+            const expectedKey = state.requiredInputs[state.currentIndex];
+            
+            const inputKey = event.code; 
+            
+            if (!KEY_POOL.includes(inputKey)) return;
+
+            if (inputKey === expectedKey) {
+                state.currentIndex++;
+                
+                if (state.currentIndex >= gameState.maxQTEAttempts) {
+                    state.success = true;
+                    finishQTE();
+                } else {
+                    renderQTEPrompt();
+                }
+
+            } else {
+                // FIX: 입력 실패 시 즉시 종료 (요청 반영)
+                log(`❌ QTE 입력 실패: ${inputKey}. 수리 실패.`, 'danger');
+                state.success = false;
+                finishQTE();
+            }
+        }
+        
+        // --- Timing Minigame ---
+        
+        function startTimingMinigame(difficulty) {
+            const duration = [2500, 1500, 1000][difficulty - 1]; 
+            
+            let greenZoneWidth, greenZoneStart;
+            if (difficulty === 3) {
+                greenZoneWidth = 0.10; // 10%
+                greenZoneStart = 0.65; // 65% 시작
+            } else {
+                greenZoneWidth = 0.20; // 20%
+                greenZoneStart = 0.60; // 60% 시작
+            }
+            
+            timingBarGreenZoneEl.style.width = `${greenZoneWidth * 100}%`;
+            timingBarGreenZoneEl.style.left = `${greenZoneStart * 100}%`;
+
+            indicatorEl.style.animation = 'none';
+            void indicatorEl.offsetWidth; 
+            indicatorEl.style.animation = `moveIndicator ${duration}ms linear infinite alternate`;
+        }
+
+        function handleTimingInput(event) {
+            if (!gameState.isQTEActive || event.code !== 'Space') return;
+            
+            const state = gameState.qteState;
+            
+            if (indicatorEl.style.animationName !== 'moveIndicator') return;
+
+            const indicatorRect = indicatorEl.getBoundingClientRect();
+            const containerRect = document.getElementById('timing-bar-container').getBoundingClientRect();
+            
+            const currentPosition = indicatorRect.left - containerRect.left;
+            const greenZoneRect = timingBarGreenZoneEl.getBoundingClientRect();
+            
+            const greenZoneStart = greenZoneRect.left - containerRect.left;
+            const greenZoneEnd = greenZoneRect.right - containerRect.left;
+            
+            if (currentPosition >= greenZoneStart && currentPosition <= greenZoneEnd) {
+                state.currentIndex++;
+                log(`✅ 타이밍 성공! [${state.currentIndex}/${gameState.maxQTEAttempts}]`);
+                
+                if (state.currentIndex >= gameState.maxQTEAttempts) {
+                    state.success = true;
+                    finishQTE();
+                }
+            } else {
+                log('❌ 타이밍 실패! 사기 1 추가 감소.', 'danger');
+                gameState.hp = Math.max(0, gameState.hp - 1);
+                finishQTE(); 
+            }
+        }
+        
+        // --- Puzzle Minigame ---
+
+        function startPuzzleMinigame(difficulty) {
+            const questionEl = document.getElementById('puzzle-question');
+            const answerInput = document.getElementById('puzzle-answer');
+            answerInput.value = '';
+
+            let num1, num2, operation, correctAnswer;
+
+            if (difficulty === 1) {
+                num1 = d(10) + 5; num2 = d(10); operation = '+'; correctAnswer = num1 + num2;
+                startQTECountdown(3000);
+            } else if (difficulty === 2) {
+                num1 = d(15) + 10; num2 = d(8) + 2; operation = Math.random() < 0.5 ? '-' : '*';
+                correctAnswer = operation === '-' ? num1 - num2 : num1 * num2;
+                startQTECountdown(2000);
+            } else { 
+                const ops = ['+', '*', '-', '/']; operation = ops[Math.floor(Math.random() * ops.length)];
+                
+                if (operation === '/') {
+                    num2 = d(4) + 2;
+                    correctAnswer = d(10) + 5;
+                    num1 = correctAnswer * num2;
+                } else {
+                    num1 = d(10) + 5; num2 = d(5) + 2;
+                    correctAnswer = operation === '+' ? num1 + num2 : operation === '*' ? num1 * num2 : num1 - num2;
+                }
+                startQTECountdown(1500);
+            }
+            
+            gameState.qteState.puzzleAnswer = correctAnswer;
+            questionEl.innerText = `${num1} ${operation} ${num2} = ?`;
+            
+        }
+
+        function checkPuzzleAnswer() {
+            if (!gameState.isQTEActive) return;
+            
+            const userAnswer = parseInt(document.getElementById('puzzle-answer').value);
+            
+            if (userAnswer === Math.round(gameState.qteState.puzzleAnswer)) { 
+                gameState.qteState.success = true;
+                log('✅ 퍼즐 해결! 배급 코드 확인.', 'success');
+            } else {
+                log('❌ 잘못된 코드 입력!', 'danger');
+            }
+            finishQTE();
+        }
+        
+        function removeFault(faultIndex, isQTE = true, fault = null) {
+            // QTE 성공 보상 적용 (식량 배급만)
+            if (isQTE && fault.system.successReward === 'HP_BONUS') {
+                const bonusHP = fault.difficulty; 
+                gameState.hp = Math.min(10, gameState.hp + bonusHP); 
+                log(`✨ [${fault.system.name}] 수리 보상으로 사기 ${bonusHP} 회복!`, 'success');
+            }
+
+            const faultToRemoveId = gameState.faults[faultIndex].id;
+            gameState.faults = gameState.faults.filter(f => f.id !== faultToRemoveId);
+        }
+
+        // --- Finish QTE and General Flow ---
+
+        function qteFailedByTime() {
+            if (!gameState.isQTEActive) return;
+            log('⏱️ 시간 초과! 수리 실패.', 'danger');
+            gameState.qteState.success = false;
+            finishQTE();
+        }
+
+        function finishQTE() {
+            clearTimeout(qteTimer);
+            
+            document.removeEventListener('keydown', handleQTEInput);
+            document.removeEventListener('keydown', handleTimingInput);
+            
+            qteTimerBarEl.style.transition = 'none';
+            qteTimerBarEl.style.width = '100%';
+            qteTimerBarEl.style.display = 'none';
+
+            if (indicatorEl) {
+                indicatorEl.style.animation = 'none';
+            }
+
+            const state = gameState.qteState;
+            
+            if (state.success) {
+                log(`🔧 ${state.system.name} 수리 성공!`, 'success');
+                removeFault(state.faultIndex, true, state);
+
+            } else {
+                
+                // QTE 실패 기본 패널티: 사기 1 감소
+                gameState.hp = Math.max(0, gameState.hp - 1);
+                log(`⚠️ ${state.system.name} 수리 실패! 사기 1 감소. 다음 턴에 다시 시도해야 합니다.`, 'danger');
+
+                if (state.system.failPenalty === 'HP_CRITICAL') {
+                    const extraDamage = 1; 
+                    gameState.hp = Math.max(0, gameState.hp - extraDamage);
+                    log(`🚨 [${state.system.name}] 중요 고장 실패! 사기 ${extraDamage} 추가 감소.`, 'danger');
+                } else if (state.system.failPenalty === 'ACTION_REDUCE') {
+                    gameState.maxActions = Math.max(1, gameState.maxActions - 1);
+                    log(`⚠️ [${state.system.name}] 통신 장치 실패 영향! 다음 턴 행동 횟수가 ${gameState.maxActions}회로 감소합니다.`, 'warning');
+                }
+                
+                // QTE 실패시 봉쇄 상태 해제
+                gameState.faults[state.faultIndex].isBlockaded = false;
+            }
+
+            gameState.isQTEActive = false;
+            gameState.qteState = null;
+            document.getElementById('qte-overlay').style.display = 'none';
+            document.getElementById('next-turn-btn').disabled = false;
+            
+            updateUI(); 
+            
+            if (gameState.faults.length === 0) {
+                setTimeout(() => nextTurn(), 500); 
+            }
+        }
+
+        // Start the game
+        startGame();
+    </script>
+</body>
+</html>
