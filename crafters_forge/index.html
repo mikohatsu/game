@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>크레프터의 공방: Lv. 30 확장 에디션</title>
+    <style>
+        /* --- CSS 스타일 --- */
+        * { box-sizing: border-box; user-select: none; }
+        body { 
+            font-family: 'Segoe UI', sans-serif; margin: 0; height: 100vh; 
+            display: flex; overflow: hidden; background-color: #f0f0f0; color: #333;
+        }
+
+        /* 레이아웃 */
+        #palette-area { width: 260px; background: #fff; border-right: 1px solid #ddd; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
+        #workspace-area { flex: 1; background: #e0e0e0; position: relative; display: flex; flex-direction: column; }
+        #stage-area { width: 420px; background: #f8f9fa; border-left: 1px solid #ccc; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+
+        /* HUD */
+        #hud-bar { height: 50px; background: #34495e; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 10; }
+        .hud-info { font-weight: bold; font-size: 14px; }
+        .limit-badge { background: #e74c3c; padding: 5px 10px; border-radius: 15px; font-size: 12px; margin-left: 10px; transition: background 0.3s; }
+        .limit-ok { background: #2ecc71; }
+
+        /* 블록 스타일 */
+        #code-header { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px 0; background-color: #e0e0e0;}
+        #clear-btn { background: #95a5a6; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        #clear-btn:hover { background: #7f8c8d; }
+
+        #code-canvas { flex: 1; padding: 20px; overflow: auto; background-image: radial-gradient(#ccc 1px, transparent 1px); background-size: 20px 20px; }
+        .block { padding: 10px 12px; margin-bottom: 5px; border-radius: 4px; color: white; font-size: 13px; font-weight: 600; cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; position: relative; min-width: 180px; }
+        .block:active { cursor: grabbing; }
+        .block-motion { background-color: #4c97ff; border: 1px solid #3373cc; }
+        .block-control { background-color: #ffab19; border: 1px solid #cf8b17; }
+        .container-block { flex-direction: column; align-items: flex-start; }
+        .container-header { 
+            width: 100%; 
+            display: flex; 
+            justify-content: space-between; /* ⭐ UX 개선: 요소 간 간격 최대화 */
+            align-items: center; 
+        }
+        .container-content { min-height: 40px; min-width: 90%; margin-top: 5px; margin-left: 15px; background: rgba(0,0,0,0.1); border-radius: 4px; padding: 5px; border: 2px dashed rgba(255,255,255,0.4); }
+        
+        /* ⭐ UX 개선: 삭제 버튼 스타일 */
+        .remove-btn { 
+            font-size: 16px; 
+            color: white; 
+            cursor: pointer; 
+            margin-left: auto; 
+            padding: 0 5px; 
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+
+        .remove-btn:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            color: #e74c3c; 
+        }
+        /* --- */
+
+        /* 맵 & 타일 */
+        .map-grid {
+            display: grid; 
+            gap: 2px; background: #333; border: 4px solid #333; margin: 20px 0; border-radius: 4px;
+        }
+        .tile { width: 60px; height: 60px; display: flex; justify-content: center; align-items: center; position: relative; background: #95a5a6; }
+        .tile.W { background: #34495e; background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, #2c3e50 5px, #2c3e50 10px); } 
+        .tile.R::after { content: '💎'; font-size: 24px; position: absolute; } 
+        .tile.R { background: #f1c40f; } 
+        .tile.G { background: #2ecc71; } /* Goal Open */
+        .tile.G.locked { background: #7f8c8d; cursor: not-allowed; } 
+        .tile.G::after { content: '🚩'; font-size: 24px; }
+        .tile.G.locked::after { content: '🔒'; font-size: 24px; opacity: 0.5; }
+        
+        /* 새로운 타일 스타일 */
+        .tile.H { background: #c0392b; } /* 함정 */
+        .tile.H::after { content: '🕳️'; font-size: 24px; }
+        .tile.P { background: #8e44ad; } /* 격턴 함정 */
+        .tile.P::after { content: '🔄'; font-size: 24px; }
+        .tile.B { background: #e67e22; border: 3px dashed #d35400; } /* 부서지는 칸 */
+        .tile.B::after { content: '🧱'; font-size: 24px; opacity: 0.7; }
+
+        /* 맵 숨기기 스타일 */
+        .map-grid.hidden-map .tile { background-color: #555; border: 1px solid #444; }
+        .map-grid.hidden-map .tile.T, .map-grid.hidden-map .tile.W { background-color: #555; background-image: none; border: 1px solid #444; }
+        
+        .robot { width: 40px; height: 40px; background: #3498db; border-radius: 8px; position: absolute; z-index: 5; display: flex; justify-content: center; align-items: center; color: white; font-size: 20px; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+
+        /* 컨트롤 버튼 그룹 */
+        #game-controls { width: 100%; display: flex; gap: 10px; margin-top: 5px; }
+        #run-btn, .action-btn { flex-grow: 1; padding: 15px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; background: #2ecc71; color: white; cursor: pointer; transition: transform 0.1s; }
+        #run-btn:disabled, .action-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+        #run-btn:active, .action-btn:active { transform: scale(0.98); }
+        .action-btn.retry { background: #3498db; }
+        .action-btn.next { background: #f39c12; }
+        
+        #console-log { width: 100%; height: 150px; background: #222; color: #0f0; font-family: monospace; font-size: 12px; padding: 10px; margin-top: 15px; border-radius: 5px; overflow-y: auto; }
+        
+        /* 레벨 네비게이션 */
+        .level-nav { display: flex; width: 100%; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .level-nav button { background: #fff; border: 1px solid #ccc; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+
+        /* 드래그 힌트 */
+        .drop-hint { height: 40px; border: 2px dashed #999; background: rgba(0,0,0,0.05); margin-bottom: 5px; border-radius: 4px; }
+        .block.active-exec { box-shadow: 0 0 0 3px #fff, 0 0 15px #f1c40f; z-index: 100; transform: scale(1.05); }
+
+        /* --- 모달 스타일 (새로 추가) --- */
+        #unlock-modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.3s;
+        }
+
+        #unlock-modal {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            animation: bounceIn 0.5s ease-out;
+        }
+
+        #unlock-modal h2 {
+            color: #f39c12;
+            margin-top: 0;
+        }
+
+        #unlocked-block-display {
+            display: inline-flex !important; /* 모달 내에서 중앙 정렬 */
+            margin: 15px auto;
+            font-size: 18px;
+            padding: 15px 25px;
+        }
+
+        #unlocked-block-desc {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        #unlock-modal button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.2s;
+        }
+        #unlock-modal button:hover {
+            background: #2980b9;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            60% { transform: scale(1.05); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="palette-area">
+        <h3 style="color:#555;">🧩 부품 창고 (해금됨)</h3>
+        <div id="palette-content">
+            </div>
+        <div style="margin-top:auto; font-size:12px; color:#888;">
+            Tip: 맵 크기는 5x5로 고정됩니다.
+        </div>
+    </div>
+
+    <div id="workspace-area">
+        <div id="hud-bar">
+            <span class="hud-info">현재 미션: <span id="level-name-display">Lv.1</span></span>
+            <div style="display:flex; align-items:center;">
+                <span id="resource-status" class="hud-info" style="margin-right:15px;">💎 0/0</span>
+                <span id="block-counter" class="limit-badge limit-ok">블록: 0 / ∞</span>
+            </div>
+        </div>
+        <div id="code-header">
+            <p style="color:#666; font-size:14px; margin:0;">여기에 블록을 조합하세요</p>
+            <button id="clear-btn" onclick="clearCodeCanvas()">모두 제거</button>
+        </div>
+        <div id="code-canvas">
+            <p style="text-align:center; color:#999; margin-top:50px; pointer-events:none;">
+                블록을 끌어다 놓으세요.
+            </p>
+        </div>
+    </div>
+
+    <div id="stage-area">
+        <div class="level-nav">
+            <button onclick="changeLevel(-1)">◀ 이전</button>
+            <strong id="level-indicator">Level 1</strong>
+            <button id="next-level" onclick="changeLevel(1)">다음 ▶</button>
+        </div>
+        <p id="level-desc" style="font-size:13px; color:#666; text-align:center; min-height:40px;">설명</p>
+        
+        <div class="map-grid" id="game-map"></div>
+        
+        <div id="game-controls">
+            <button id="run-btn" onclick="runGame()">🚩 실행하기</button>
+            <button id="retry-btn" class="action-btn retry" onclick="resetGame()" style="display:none;">🔁 재시도</button>
+            <button id="next-btn" class="action-btn next" onclick="changeLevel(1)" style="display:none;">다음 단계 ▶</button>
+        </div>
+        <div id="console-log"></div>
+    </div>
+
+    <div id="unlock-modal-overlay" style="display:none;">
+        <div id="unlock-modal">
+            <h2>✨ 새로운 블록 해금!</h2>
+            <div id="unlocked-block-display" class="block block-motion"></div>
+            <p id="unlocked-block-desc"></p>
+            <button onclick="closeUnlockModal()">확인</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- 핵심 상수 --- */
+        const MAP_SIZE = 5; 
+        const DIR_VECS = [{x:0,y:-1}, {x:1,y:0}, {x:0,y:1}, {x:-1,y:0}]; // 북동남서
+
+        /* --- 블록 정의 (해금용 마스터 목록) --- */
+        const ALL_BLOCK_TYPES = [
+            { id: 'move', type: 'motion', label: '1칸 전진', usage: '로봇이 바라보는 방향으로 한 칸 이동합니다.' },
+            { id: 'turn_left', type: 'motion', label: '좌회전 ↺', usage: '로봇이 시계 반대 방향(왼쪽)으로 90도 회전합니다.' },
+            { id: 'turn_right', type: 'motion', label: '우회전 ↻', usage: '로봇이 시계 방향(오른쪽)으로 90도 회전합니다.' },
+            { id: 'loop', type: 'control', label: '번 반복', isContainer: true, hasInput: true, def: 3, usage: '내부의 블록들을 정해진 횟수만큼 반복 실행합니다.' },
+            { id: 'collect', type: 'motion', label: '자원 줍기 💎', usage: '현재 칸에 자원(R)이 있으면 수집하고 맵에서 제거합니다.' },
+            { id: 'jump', type: 'motion', label: '점프 (벽 넘기)', usage: '앞에 벽이 있으면 2칸 점프하여 넘고, 없으면 1칸 전진합니다.' },
+            { id: 'if_wall', type: 'control', label: '만약 앞에 벽이면', isContainer: true, usage: '로봇 전방에 벽(W)이 있을 경우에만 내부 블록을 실행합니다.' },
+            { id: 'if_resource', type: 'control', label: '만약 자원이라면?', isContainer: true, usage: '로봇이 현재 서 있는 칸에 자원(R)이 있을 경우에만 내부 블록을 실행합니다.' }, 
+            { id: 'u_turn', type: 'motion', label: '뒤로 돌기 (U-Turn)', usage: '로봇이 180도 방향을 전환합니다. (좌회전 2회와 동일)' },
+            { id: 'break_loop', type: 'control', label: '반복 즉시 종료 (Break)', usage: '현재 실행 중인 Loop 블록을 즉시 중단하고 Loop 다음 명령으로 이동합니다.' },
+            { id: 'wait', type: 'motion', label: '1스텝 대기 ⏱️', usage: '로봇이 현재 위치에서 아무 행동 없이 1 게임 스텝을 보냅니다. (타이밍 조절용)' }, 
+        ];
+
+        /* --- 데이터: 레벨 디자인 (LEVELS 배열은 여기에 있어야 합니다) --- */
+        const LEVELS = [
+            // Lv. 1~3: 튜토리얼 및 회전 해금
+            { name: "Lv.1 직진 튜토리얼", desc: "첫 걸음입니다. 전진만 하세요.", maxBlocks: 4, start: {x:0, y:2, dir:1}, map: [['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','G','T','T'], ['T','W','W','W','T'], ['T','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move'] },
+            { name: "Lv.2 회전 해금", desc: "좌/우 회전을 배우세요.", maxBlocks: 4, start: {x:1, y:4, dir:1}, map: [['T','T','T','T','T'], ['T','W','T','W','T'], ['T','W','G','W','T'], ['T','W','T','W','T'], ['T','S','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right'] },
+            { name: "Lv.3 회전 조합", desc: "회전 블록만으로 복잡한 경로를 뚫으세요.", maxBlocks: 5, start: {x:0, y:4, dir:1}, map: [['T','T','T','T','T'], ['T','W','W','W','T'], ['T','T','T','T','T'], ['W','T','G','W','T'], ['S','T','W','W','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right'] },
+            // Lv. 4~5: 루프 해금 (Loop 강제)
+            { name: "Lv.4 루프 튜토리얼", desc: "반복 블록이 해금되었습니다. 3개 제한!", maxBlocks: 3, start: {x:0, y:4, dir:1}, map: [['G','T','T','T','T'], ['T','W','W','W','T'], ['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop'] },
+            { name: "Lv.5 나선형 루프", desc: "4개의 나선형 회전을 반복으로 풀어보세요.", maxBlocks: 7, start: {x:0, y:0, dir:1}, map: [['S','T','T','T','T'], ['W','W','W','W','T'], ['G','T','T','W','T'], ['T','W','T','W','T'], ['T','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop'] },
+            // Lv. 6~8: 자원, 점프 해금
+            { name: "Lv.6 자원과 점프", desc: "자원 줍기와 점프 블록이 해금되었습니다.", maxBlocks: 8, start: {x:0, y:4, dir:0}, map: [['T','W','W','W','G'], ['T','W','T','W','W'], ['T','W','T','W','T'], ['W','W','W','W','W'], ['S','W','T','W','R']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump'] },
+            { name: "Lv.7 핑거 트랩", desc: "벽이 엇갈립니다. 점프와 회전 조합이 필요합니다.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','W','T','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['S','T','R','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump'] },
+            { name: "Lv.8 자원 최적화", desc: "3개 자원 수집 후 골인. 블록 수를 최대한 줄이세요.", maxBlocks: 10, start: {x:0, y:2, dir:0}, map: [['R','T','T','T','R'], ['W','W','W','W','W'], ['S','T','T','T','T'], ['W','W','W','W','W'], ['G','T','T','T','R']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump'] },
+            // Lv. 9~15: 탐지 불가 (Hidden) 및 조건문 해금
+            { name: "Lv.9 조건문 해금", desc: "벽/자원 확인 조건문 해금. 벽을 만나면 회전하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','T','W','T','R'], ['T','T','W','T','T'], ['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','T','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.10 미로 (Hidden)", desc: "맵이 안 보입니다. 벽을 찾아 경로를 만드세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','W','W','W','T'], ['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.11 자원 자동탐색", desc: "보이지 않는 맵에서 자원을 모두 수집하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['T','R','T','R','G'], ['W','W','W','W','T'], ['T','T','T','T','T'], ['T','W','R','W','T'], ['S','T','T','T','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.12 미로 2", desc: "조건문을 활용한 효율적인 미로 탐색이 필요합니다.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','W','T','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['S','T','R','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.13 핑거 트랩 (Hidden 2)", desc: "조건문과 반복을 이용해 숨겨진 맵을 통과하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['T','T','R','T','G'], ['T','W','W','W','T'], ['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','R','T','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.14 점프 자동화", desc: "점프와 If_Wall을 이용해 장애물을 건너며 전진하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','W','R','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['T','W','T','W','T'], ['S','T','T','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            { name: "Lv.15 중간 보스 (Hidden)", desc: "난이도 급상승! 모든 것을 사용해 최적화하세요.", maxBlocks: 10, start: {x:0, y:2, dir:1}, map: [['G','R','R','R','T'], ['W','W','W','W','T'], ['S','T','T','T','T'], ['T','W','W','W','W'], ['R','T','T','T','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource'] },
+            // Lv. 16~20: U-Turn, Break Loop 해금 (최적화)
+            { name: "Lv.16 U-Turn 해금", desc: "뒤로 돌기(U-Turn)가 해금. 회전 2블록을 1블록으로 대체하세요.", maxBlocks: 6, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','W','W','W','T'], ['T','T','T','T','T'], ['T','W','W','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn'] },
+            { name: "Lv.17 Break Loop 해금", desc: "반복 즉시 종료가 해금. 무한 루프를 멈추세요.", maxBlocks: 8, start: {x:0, y:4, dir:1}, map: [['T','T','T','T','T'], ['R','W','W','W','G'], ['T','T','R','T','T'], ['T','W','W','W','W'], ['S','R','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            { name: "Lv.18 최적화 미로 (Hidden 3)", desc: "숨겨진 맵에서 모든 블록을 최소화하세요.", maxBlocks: 7, start: {x:0, y:4, dir:0}, map: [['G','W','T','W','T'], ['T','W','R','W','R'], ['T','W','T','W','T'], ['R','W','R','W','T'], ['S','T','T','T','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            { name: "Lv.19 무한 순환", desc: "Loop와 Break를 활용해 최단 경로로 탈출하세요.", maxBlocks: 8, start: {x:0, y:2, dir:1}, map: [['T','T','T','T','T'], ['W','W','W','W','T'], ['S','T','R','T','T'], ['T','W','W','W','G'], ['T','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            { name: "Lv.20 최종 최적화 (Hidden 4)", desc: "숨겨진 맵의 모든 기믹을 파훼하고 골인.", maxBlocks: 7, start: {x:0, y:2, dir:1}, map: [['G','R','R','R','T'], ['W','W','W','W','T'], ['S','T','T','T','T'], ['T','W','W','W','W'], ['R','T','T','T','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            // Lv. 21~25: 함정 및 대기 해금
+            { name: "Lv.21 함정 발견 (H)", desc: "닿으면 사망하는 함정이 추가되었습니다. 피하세요.", maxBlocks: 9, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','W','H','W','T'], ['T','W','T','W','T'], ['T','W','H','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            { name: "Lv.22 격턴 함정 (P)", desc: "밟으면 180도 회전하는 함정을 피해 골인하세요.", maxBlocks: 8, start: {x:0, y:2, dir:1}, map: [['T','T','T','T','G'], ['W','W','W','W','T'], ['S','P','T','P','T'], ['W','W','W','W','T'], ['T','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop'] },
+            { name: "Lv.23 대기 블록 해금", desc: "함정을 피하기 위해 1스텝 멈추는 '대기' 블록이 해금됩니다.", maxBlocks: 9, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','W','H','W','T'], ['T','W','T','W','T'], ['T','W','H','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.24 타이밍 (Hidden 5)", desc: "숨겨진 함정들을 대기 블록으로 피해 탈출하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','W','H','W','T'], ['T','W','P','W','T'], ['T','W','H','W','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.25 함정 극복", desc: "모든 종류의 함정을 피하면서 자원을 모으세요.", maxBlocks: 10, start: {x:0, y:2, dir:1}, map: [['T','R','H','R','T'], ['W','W','W','W','T'], ['S','P','T','P','G'], ['T','W','W','W','W'], ['T','T','T','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            // Lv. 26~30: 부서지는 칸 및 최종 난이도
+            { name: "Lv.26 부서지는 칸 (B)", desc: "밟고 이동하면 사라져 추락사합니다. 밟은 후 대기하세요.", maxBlocks: 9, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','B','W','B','T'], ['T','T','T','T','T'], ['T','B','W','B','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.27 이중 위험", desc: "부서지는 칸과 함정을 피해 자원을 모두 모으세요.", maxBlocks: 11, start: {x:0, y:4, dir:0}, map: [['G','R','H','R','T'], ['B','W','W','W','T'], ['T','B','T','T','T'], ['T','W','W','W','T'], ['S','T','T','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.28 부서지는 미로 (Hidden 6)", desc: "숨겨진 맵에서 떨어지지 않고 탈출하세요.", maxBlocks: 10, start: {x:0, y:4, dir:0}, map: [['G','T','T','T','T'], ['T','B','W','B','T'], ['T','T','T','T','T'], ['T','B','W','B','T'], ['S','T','T','T','T']], reqAllRes: false, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.29 지옥의 핑거 트랩", desc: "모든 기믹의 복합체. 최적화된 조건문/반복/대기가 필요합니다.", maxBlocks: 12, start: {x:0, y:4, dir:0}, map: [['G','R','H','R','T'], ['B','W','W','W','T'], ['T','P','T','T','T'], ['H','W','R','W','B'], ['S','T','T','T','T']], reqAllRes: true, isHidden: false, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+            { name: "Lv.30 🌟 최종 보스 챌린지 (Hidden 7)", desc: "맵 디자인의 모든 악의와 최적화가 결합된 최종 미션입니다.", maxBlocks: 12, start: {x:0, y:4, dir:0}, map: [['G','R','H','B','T'], ['B','W','P','W','T'], ['T','T','T','T','T'], ['T','B','W','B','T'], ['S','R','H','R','T']], reqAllRes: true, isHidden: true, unlockedBlocks: ['move', 'turn_left', 'turn_right', 'loop', 'collect', 'jump', 'if_wall', 'if_resource', 'u_turn', 'break_loop', 'wait'] },
+        ];
+
+        /* --- 전역 변수 --- */
+        let curLevelIdx = 0;
+        let curMapData = [];
+        let robot = {};
+        let totalResCount = 0;
+
+        // ⭐ 새로 추가: 클리어 상태를 저장할 배열
+        let clearedLevels = new Array(LEVELS.length).fill(false);
+
+        /* --- 초기화 및 UI --- */
+        function init() {
+            const savedData = localStorage.getItem('clearedLevels');
+    
+            if (savedData) {
+                // 데이터가 있으면 JSON 문자열을 배열로 파싱하여 사용합니다.
+                log("[로그] 현재 클리어 상태 : " + savedData, 'info')
+                clearedLevels = JSON.parse(savedData);
+            } else {
+                // 데이터가 없으면 현재 레벨 개수만큼 false로 초기화합니다.
+                log("[로그] 저장된 클리어 상태가 없습니다. 초기화됩니다.", 'warn');
+                clearedLevels = new Array(LEVELS.length).fill(false);
+            }
+            // LEVELS 배열이 비어있지 않다고 가정하고 로드합니다.
+            if (LEVELS.length > 0) {
+                loadLevel(0);
+            } else {
+                log("[오류] LEVELS 데이터가 로드되지 않았습니다.", 'err');
+                document.getElementById('level-desc').innerText = "LEVELS 배열을 코드에 삽입해주세요.";
+            }
+
+            setupDnD();
+        }
+
+        function clearCodeCanvas() {
+            document.getElementById('code-canvas').innerHTML = '<p style="text-align:center; color:#999; margin-top:50px; pointer-events:none;">블록을 끌어다 놓으세요.</p>';
+            updateHUD();
+        }
+        
+        function renderPalette() {
+            const container = document.getElementById('palette-content');
+            container.innerHTML = '';
+            
+            const unlockedIds = LEVELS[curLevelIdx].unlockedBlocks;
+            
+            ALL_BLOCK_TYPES
+                .filter(b => unlockedIds.includes(b.id)) // 해금된 블록만 필터링
+                .forEach(b => container.appendChild(createBlockEl(b)));
+        }
+
+        function createBlockEl(data) {
+            const el = document.createElement('div');
+            el.className = `block block-${data.type}`;
+            el.dataset.id = data.id;
+            el.draggable = true;
+            
+            if (data.isContainer) {
+                el.classList.add('container-block');
+                const header = document.createElement('div');
+                header.className = 'container-header';
+                
+                if (data.hasInput) {
+                    header.innerHTML = `<span>🔁 <input type="number" min="2" max="9" value="${data.def}" onclick="event.stopPropagation()"> ${data.label}</span>`;
+                } else {
+                    header.innerHTML = `<span>❓ ${data.label}</span>`;
+                }
+                el.appendChild(header);
+                
+                const content = document.createElement('div');
+                content.className = 'container-content';
+                el.appendChild(content);
+
+            } else {
+                el.innerText = data.label;
+            }
+            
+            el.addEventListener('dragstart', handleDragStart);
+            return el;
+        }
+
+        async function loadLevel(idx) {
+            if (idx < 0 || idx >= LEVELS.length) return;
+            
+            // 현재 레벨과 다음 레벨의 해금 블록 목록을 비교
+            const prevLv = LEVELS[curLevelIdx] || { unlockedBlocks: [] };
+            const nextLv = LEVELS[idx];
+
+            const prevBlocks = new Set(prevLv.unlockedBlocks);
+            const newBlocks = nextLv.unlockedBlocks.filter(b => !prevBlocks.has(b));
+            
+            curLevelIdx = idx; // 인덱스 먼저 업데이트
+            
+            if (newBlocks.length > 0 && !clearedLevels[idx]) {
+                const newBlockId = newBlocks[newBlocks.length - 1];
+                showUnlockModal(newBlockId);
+
+                // 버튼 클릭을 기다리는 Promise를 바로 inline으로 생성
+                await new Promise(resolve => {
+                    document.querySelector('#unlock-modal button').onclick = () => {
+                        closeUnlockModal();
+                        resolve(); // 클릭 시 resolve 실행됨 → await 해제
+                    };
+                });
+            }
+            proceedLoadLevel(idx);
+        }
+
+        function proceedLoadLevel(idx) {
+            const lv = LEVELS[idx];
+
+            curMapData = lv.map.map(row => [...row]);
+            robot = { ...lv.start, inv: [], stepCount: 0 };
+            
+            totalResCount = 0;
+            curMapData.forEach(row => row.forEach(cell => { if(cell === 'R') totalResCount++; }));
+
+            document.getElementById('level-indicator').innerText = lv.name;
+            document.getElementById('level-name-display').innerText = `Lv.${idx+1}`;
+            document.getElementById('level-desc').innerText = lv.desc;
+            document.getElementById('console-log').innerText = '';
+            
+            log(`[시스템] ${lv.name} 로드 완료.`);
+            log(`[목표] 자원 ${totalResCount}개 획득 후 골인하세요.`);
+
+            // 블록 팔레트 업데이트 (해금 적용)
+            renderPalette();
+
+            // 버튼 상태 초기화
+            document.getElementById('run-btn').style.display = 'block';
+            document.getElementById('retry-btn').style.display = 'none';
+            document.getElementById('next-btn').style.display = 'none';
+            document.getElementById('next-level').style.visibility = clearedLevels[idx] ? 'visible' : 'hidden';
+
+            updateHUD();
+            renderMap();
+        }
+
+        // --- resetGame 함수도 proceedLoadLevel 호출로 수정 ---
+        function resetGame() {
+            proceedLoadLevel(curLevelIdx);
+        }
+
+        function updateHUD() {
+            const collected = robot.inv.length;
+            const resText = document.getElementById('resource-status');
+            resText.innerText = `💎 ${collected} / ${totalResCount}`;
+            resText.style.color = (collected >= totalResCount || totalResCount === 0) ? '#2ecc71' : '#fff';
+
+            const max = LEVELS[curLevelIdx].maxBlocks;
+            const current = countBlocks(document.getElementById('code-canvas'));
+            const counter = document.getElementById('block-counter');
+            
+            counter.innerText = `블록: ${current} / ${max}`;
+            if (current > max) {
+                counter.className = 'limit-badge';
+                counter.style.background = '#e74c3c';
+                document.getElementById('run-btn').disabled = true;
+                document.getElementById('run-btn').innerText = "🚫 블록 초과!";
+            } else {
+                counter.className = 'limit-badge limit-ok';
+                document.getElementById('run-btn').disabled = false;
+                document.getElementById('run-btn').innerText = "🚩 실행하기";
+            }
+        }
+
+        function countBlocks(container) {
+            let count = 0;
+            const blocks = container.querySelectorAll(':scope > .block');
+            blocks.forEach(b => {
+                count++;
+                const inner = b.querySelector('.container-content');
+                if (inner) count += countBlocks(inner);
+            });
+            return count;
+        }
+
+        function renderMap() {
+            const grid = document.getElementById('game-map');
+            grid.innerHTML = '';
+            
+            const isHidden = LEVELS[curLevelIdx].isHidden;
+            if (isHidden) {
+                grid.classList.add('hidden-map');
+            } else {
+                grid.classList.remove('hidden-map');
+            }
+            
+            grid.style.gridTemplateColumns = `repeat(${MAP_SIZE}, 60px)`; 
+            grid.style.gridTemplateRows = `repeat(${MAP_SIZE}, 60px)`;
+            grid.style.width = `${MAP_SIZE * 60 + (MAP_SIZE - 1) * 2 + 8}px`;
+
+            const isGoalLocked = LEVELS[curLevelIdx].reqAllRes && (robot.inv.length < totalResCount);
+
+            for(let y=0; y<MAP_SIZE; y++) {
+                for(let x=0; x<MAP_SIZE; x++) {
+                    const t = document.createElement('div');
+                    let type = curMapData[y][x];
+                    
+                    if (type === 'G' && isGoalLocked) t.className = 'tile G locked';
+                    else t.className = `tile ${type}`;
+                    
+                    if (robot.x === x && robot.y === y) {
+                        const r = document.createElement('div');
+                        r.className = 'robot';
+                        r.style.transform = `rotate(${robot.dir * 90}deg)`;
+                        r.innerText = '▲';
+                        t.appendChild(r);
+                    }
+                    grid.appendChild(t);
+                }
+            }
+        }
+
+        function changeLevel(dir) {
+            loadLevel(curLevelIdx + dir);
+            clearCodeCanvas();
+        }
+
+        /* --- 게임 로직 (실행) --- */
+        async function runGame() {
+            resetGame();
+            
+            const root = document.getElementById('code-canvas');
+            const commands = parseBlocks(root);
+            
+            if (commands.length === 0) { log("⚠️ 블록이 없습니다."); return; }
+            
+            log("🚀 프로그램 실행 중...");
+            document.getElementById('run-btn').disabled = true;
+            
+            const finalResult = await execute(commands);
+            
+            document.getElementById('run-btn').disabled = false;
+            updateHUD();
+            
+            if (finalResult === false) {
+                log("❌ 프로그램이 치명적인 오류로 중단되었습니다.", 'err');
+                document.getElementById('run-btn').style.display = 'none';
+                document.getElementById('retry-btn').style.display = 'block';
+                document.getElementById('next-btn').style.display = 'none';
+            } else if (finalResult === "success") {
+                log("🎉 미션 성공! 축하합니다! 🎉", 'suc');
+
+                // ⭐ 클리어 상태 업데이트
+                clearedLevels[curLevelIdx] = true;
+                // ⭐ 2. 로컬 스토리지에 클리어 목록 저장
+                saveClearedStatus();
+
+                document.getElementById('run-btn').style.display = 'none';
+                document.getElementById('retry-btn').style.display = 'block';
+                document.getElementById('next-btn').style.display = 'block';
+            } else {
+                log("✅ 모든 명령 실행 완료 (목표 미달성)", 'warn');
+                document.getElementById('run-btn').style.display = 'none';
+                document.getElementById('retry-btn').style.display = 'block';
+                document.getElementById('next-btn').style.display = 'none';
+            }
+        }
+
+        function parseBlocks(container) {
+            const cmds = [];
+            const els = container.querySelectorAll(':scope > .block');
+            els.forEach(el => {
+                const id = el.dataset.id;
+                if (id === 'loop' || id === 'if_wall' || id === 'if_resource') {
+                    const cnt = id === 'loop' ? el.querySelector('input').value : null;
+                    const children = parseBlocks(el.querySelector('.container-content'));
+                    cmds.push({ type: id, count: parseInt(cnt), subs: children, el: el });
+                } else {
+                    cmds.push({ type: id, el: el });
+                }
+            });
+            return cmds;
+        }
+
+        async function execute(cmds) {
+            for (const cmd of cmds) {
+                cmd.el.classList.add('active-exec');
+                robot.stepCount++;
+
+                let execResult = true;
+
+                if (cmd.type === 'loop') {
+                    log(`↺ 루프: ${cmd.count}회 반복`);
+                    for (let i = 0; i < cmd.count; i++) {
+                        const subResult = await execute(cmd.subs);
+                        if (subResult === false) { execResult = false; break; }
+                        if (subResult === "break") { execResult = true; break; }
+                        if (subResult === "success") { execResult = "success"; break; }
+                    }
+                } 
+                else if (cmd.type === 'if_wall') {
+                    const front = getFrontPos();
+                    if (isWall(front.x, front.y)) {
+                        log("🧱 벽 발견! 조건문 실행");
+                        execResult = await execute(cmd.subs);
+                    } else { log("💨 벽이 없음. 통과."); }
+                } 
+                else if (cmd.type === 'if_resource') {
+                    if (curMapData[robot.y][robot.x] === 'R') {
+                        log("💎 자원 발견! 조건문 실행");
+                        execResult = await execute(cmd.subs);
+                    } else { log("빈 칸입니다. 통과."); }
+                }
+                else if (cmd.type === 'break_loop') {
+                    log("🚨 반복 즉시 종료 (Break Loop) 실행");
+                    execResult = 'break';
+                }
+                else {
+                    const actionResult = processAction(cmd.type);
+                    execResult = actionResult;
+                }
+
+                await new Promise(r => setTimeout(r, 500));
+                cmd.el.classList.remove('active-exec');
+                if (execResult === false) return false;
+                if (execResult === "break") return "break";
+                if (execResult === "success") return "success";
+            }
+            return true;
+        }
+
+        function processAction(act) {
+            const vec = DIR_VECS[robot.dir];
+            let nx = robot.x, ny = robot.y;
+            let success = true;
+
+            // 1. 현재 위치 처리 (이동 전에 발판 부서짐 체크 및 상태 변경)
+            if (curMapData[robot.y][robot.x] === 'B') {
+                curMapData[robot.y][robot.x] = 'T'; // 부서지면 일반 칸으로 변경 (다음 스텝에 추락 체크)
+                log("🚧 발판이 부서지기 시작합니다...");
+            }
+
+            // 2. 이동/회전 계산
+            if (act === 'move') {
+                nx += vec.x; ny += vec.y;
+                log("이동");
+            } else if (act === 'jump') {
+                const front = getFrontPos();
+                if (isWall(front.x, front.y)) {
+                    nx += vec.x * 2; ny += vec.y * 2;
+                    log("🦘 벽을 넘어 2칸 점프!");
+                } else {
+                    nx += vec.x; ny += vec.y;
+                    log("🚶 벽 없이 1칸 이동.");
+                }
+            } else if (act === 'turn_left') {
+                robot.dir = (robot.dir + 3) % 4;
+                log("좌회전");
+            } else if (act === 'turn_right') {
+                robot.dir = (robot.dir + 1) % 4;
+                log("우회전");
+            } else if (act === 'u_turn') {
+                robot.dir = (robot.dir + 2) % 4;
+                log("유턴");
+            } else if (act === 'collect') {
+                if (curMapData[robot.y][robot.x] === 'R') {
+                    curMapData[robot.y][robot.x] = 'T';
+                    robot.inv.push('R');
+                    log("💎 자원 획득!");
+                } else {
+                    log("여기엔 아무것도 없습니다.");
+                }
+                renderMap();
+                updateHUD();
+                return success; // 수집은 이동이 없으므로 여기서 종료
+            } else if (act === 'wait') {
+                log("⏱️ 1스텝 대기");
+                // B 타일이 T로 바뀐 상태를 반영하기 위해 맵만 업데이트
+                renderMap(); 
+                return success; // 대기는 이동이 없으므로 여기서 종료
+            }
+
+            // 3. 이동 확정 및 충돌 체크 (회전, 수집, 대기 명령이 아닐 경우만)
+            if (act !== 'wait' && act !== 'collect' && act.indexOf('turn') === -1 && act !== 'u_turn') {
+                if (nx < 0 || nx >= MAP_SIZE || ny < 0 || ny >= MAP_SIZE) { 
+                    log("💥 맵 끝에 충돌하여 추락했습니다.", 'err'); 
+                    return false;
+                }
+                if (curMapData[ny][nx] === 'W') { 
+                    log("💥 벽에 충돌했습니다.", 'err'); 
+                    return false;
+                }
+                
+                // ⭐ 이동 확정 (로봇 위치 업데이트)
+                robot.x = nx; 
+                robot.y = ny;
+            }
+
+            // 4. 도착 지점 상태 확인 및 이벤트 처리 (로봇의 새 위치 기준)
+            const currentTile = curMapData[robot.y][robot.x];
+
+            if (currentTile === 'G') {
+                // ⭐ 버그 수정: 골인 체크는 이동이 완료된 후 새 위치에서 확인되어야 합니다.
+                const req = LEVELS[curLevelIdx].reqAllRes;
+                if (req && robot.inv.length < totalResCount) {
+                    log("🔒 자원이 부족해서 문이 열리지 않습니다! (골인 실패)", 'err');
+                    return false;
+                }
+                renderMap();
+                updateHUD();
+                return "success"; // 성공
+            } 
+            
+            // 치명적인 함정 체크 (G 체크 후)
+            if (currentTile === 'B') {
+                log("📉 발판이 부서지고 떨어졌습니다! 사망.", 'err');
+                return false;
+            } else if (currentTile === 'H') {
+                log("☠️ 함정에 빠졌습니다! 사망.", 'err');
+                return false;
+            } else if (currentTile === 'P') {
+                robot.dir = (robot.dir + 2) % 4; // 180도 회전
+                log("↩️ 격턴 함정 발동!");
+            }
+            
+            renderMap();
+            updateHUD();
+
+            return success;
+        }
+
+        /* --- DnD Logic (UX 개선 반영) --- */
+        let draggedItem = null;
+        function handleDragStart(e) {
+            draggedItem = this;
+            e.dataTransfer.effectAllowed = 'copyMove';
+            setTimeout(()=>this.classList.add('dragging'),0);
+        }
+        function setupDnD() {
+            document.addEventListener('dragover', e => {
+                e.preventDefault();
+                const container = e.target.closest('#code-canvas, .container-content');
+                if(!container) return;
+                
+                const after = getDragAfterElement(container, e.clientY);
+                const hint = document.querySelector('.drop-hint') || document.createElement('div');
+                hint.className = 'drop-hint';
+                if(after) container.insertBefore(hint, after);
+                else container.appendChild(hint);
+            });
+            document.addEventListener('drop', e => {
+                e.preventDefault();
+                const hint = document.querySelector('.drop-hint');
+                if(!hint) return;
+                
+                let newItem;
+                if (draggedItem.parentElement.id === 'palette-content') {
+                    let id = draggedItem.dataset.id;
+                    let data = ALL_BLOCK_TYPES.find(b=>b.id===id);
+                    newItem = createBlockEl(data);
+
+                    // ⭐ UX 개선: 삭제 버튼 동적 생성 및 추가
+                    const rm = document.createElement('span');
+                    rm.className='remove-btn';
+                    rm.innerHTML='✖';
+                    rm.title='블록 삭제';
+                    
+                    rm.onclick = (ev)=>{ 
+                        ev.stopPropagation(); 
+                        newItem.remove(); 
+                        updateHUD(); 
+                    };
+                    
+                    if(data.isContainer) {
+                        newItem.querySelector('.container-header').appendChild(rm);
+                    } else {
+                        newItem.appendChild(rm); 
+                    }
+                    // ⭐ 수정 끝
+
+                } else {
+                    newItem = draggedItem;
+                }
+                
+                newItem.classList.remove('dragging');
+                hint.replaceWith(newItem);
+                updateHUD();
+            });
+            document.addEventListener('dragend', ()=>{
+                const hint = document.querySelector('.drop-hint');
+                if(hint) hint.remove();
+                if(draggedItem) draggedItem.classList.remove('dragging');
+            });
+        }
+        function getDragAfterElement(container, y) {
+            const els = [...container.querySelectorAll(':scope > .block:not(.dragging)')];
+            return els.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) return { offset: offset, element: child };
+                else return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+        
+        /* --- 유틸리티 --- */
+        function getFrontPos() {
+            const vec = DIR_VECS[robot.dir];
+            return { x: robot.x + vec.x, y: robot.y + vec.y };
+        }
+
+        function isValid(x, y) {
+            return (x >= 0 && x < MAP_SIZE && y >= 0 && y < MAP_SIZE && curMapData[y][x] !== 'W');
+        }
+
+        function isWall(x, y) {
+            if (x < 0 || x >= MAP_SIZE || y < 0 || y >= MAP_SIZE) return true;
+            return curMapData[y][x] === 'W';
+        }
+
+        function log(msg, type) {
+            const div = document.getElementById('console-log');
+            const p = document.createElement('div');
+            p.innerText = `> ${msg}`;
+            
+            if (type === 'err') p.style.color = '#ff5555'; 
+            if (type === 'suc') p.style.color = '#ffff55'; 
+            if (type === 'warn') p.style.color = '#f39c12'; 
+            
+            div.prepend(p); 
+        }
+        /**
+         * 새로운 블록 해금 모달을 표시합니다.
+         * @param {string} blockId - 해금된 블록의 ID
+         */
+        function showUnlockModal(blockId) {
+            const data = ALL_BLOCK_TYPES.find(b => b.id === blockId);
+            if (!data) return;
+
+            const modal = document.getElementById('unlock-modal-overlay');
+            const display = document.getElementById('unlocked-block-display');
+            const desc = document.getElementById('unlocked-block-desc');
+
+            // 블록 시각화
+            display.className = `block block-${data.type}`;
+            if (data.isContainer && data.hasInput) {
+                display.innerText = `🔁 ${data.label}`;
+            } else if (data.isContainer) {
+                display.innerText = `❓ ${data.label}`;
+            } else {
+                display.innerText = data.label;
+            }
+
+            desc.innerText = data.usage;
+            modal.style.display = 'flex';
+        }
+
+        /**
+         * 블록 해금 모달을 닫습니다.
+         */
+        function closeUnlockModal() {
+            document.getElementById('unlock-modal-overlay').style.display = 'none';
+            // 모달을 닫은 후, 로딩할 레벨이 있다면 다음 레벨을 로드
+            // 현재는 loadLevel 함수 내에서 모달을 닫는 함수를 호출할 필요가 없습니다.
+        }
+
+        /**
+         * 클리어 상태를 로컬 스토리지에 저장합니다.
+         */
+        function saveClearedStatus() {
+            try {
+                // 배열을 JSON 문자열로 변환하여 저장합니다.
+                localStorage.setItem('clearedLevels', JSON.stringify(clearedLevels));
+            } catch (e) {
+                console.error("로컬 스토리지 저장 실패:", e);
+            }
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>네온 정크 마켓: 오버클럭 (하드 모드, 최종)</title>
+    <style>
+        :root {
+            --bg-color: #0d1117;
+            --card-bg: #161b22;
+            --text-main: #c9d1d9;
+            --accent-screw: #ff4757; /* 나사 (Red) */
+            --accent-wire: #2ed573;  /* 전선 (Green) */
+            --accent-alloy: #1e90ff; /* 합금 (Blue) */
+            --accent-battery: #ffffff; /* 배터리 (White) */
+            --accent-core: #ffa502;  /* 코어 (Gold) */
+            --neon-border: 0 0 5px rgba(255, 255, 255, 0.3);
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        /* 레이아웃 */
+        .game-container {
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 2px solid #30363d;
+            padding-bottom: 10px;
+        }
+        
+        h1 { margin: 0; font-size: 1.5rem; color: var(--accent-core); text-shadow: 0 0 10px var(--accent-core); }
+        .sub-text { font-size: 0.8rem; color: #8b949e; }
+
+        /* 영역 스타일 */
+        .area {
+            background: #21262d;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #30363d;
+        }
+        
+        .area-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        /* 자원 표시 */
+        .resource-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .res-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #000;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .res-screw { background: var(--accent-screw); }
+        .res-wire { background: var(--accent-wire); }
+        .res-alloy { background: var(--accent-alloy); }
+        .res-battery { background: var(--accent-battery); color: #000;}
+        .res-core { background: var(--accent-core); box-shadow: 0 0 8px var(--accent-core); color: #000;}
+
+        /* 카드 스타일 */
+        .market-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 10px;
+        }
+        .card {
+            background: var(--card-bg);
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 10px rgba(255,255,255,0.1);
+        }
+        .card.disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+        .card-vp { color: #eebb00; }
+        .card-bonus { font-size: 0.8rem; padding: 2px 5px; border-radius: 3px; color: #000; }
+        
+        .cost-list {
+            display: flex;
+            gap: 4px;
+            font-size: 0.8rem;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+        .cost-item {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            display: inline-block;
+            border: 1px solid rgba(0,0,0,0.5);
+        }
+
+        /* 티어 구분 */
+        .tier-title {
+            grid-column: 1 / -1;
+            font-size: 0.8rem;
+            color: #8b949e;
+            margin-top: 5px;
+            border-bottom: 1px solid #30363d;
+        }
+
+        /* 액션 버튼 */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr; /* 3개 칸으로 변경 */
+            gap: 10px;
+        }
+        button {
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn-scavenge {
+            background: #238636;
+            color: white;
+        }
+        .btn-scavenge:hover { background: #2ea043; }
+        .btn-scavenge:disabled { background: #30363d; cursor: not-allowed; }
+
+        /* 로그 */
+        #game-log {
+            height: 100px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+            background: #000;
+            padding: 5px;
+            border: 1px solid #30363d;
+            font-family: monospace;
+            color: #0f0;
+        }
+
+        /* 모달 (승리 메시지) */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #161b22;
+            padding: 30px;
+            border: 2px solid var(--accent-core);
+            text-align: center;
+            border-radius: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    <header>
+        <h1>NEON JUNK MARKET</h1>
+        <div class="sub-text">HARD MODE: AI PRIORITY [WIN > GROWTH > DENIAL] + RECYCLE</div>
+        <div id="turn-indicator" style="color: #58a6ff; margin-top:5px;">당신의 턴</div>
+    </header>
+
+    <div class="area" style="border-color: #f85149;">
+        <div class="area-header">
+            <span>🤖 AI 경쟁자 (Scavenger Bot)</span>
+            <span>VP: <span id="ai-vp">0</span> / 15</span>
+        </div>
+        <div class="resource-bar" id="ai-resources">
+            </div>
+        <div style="margin-top:5px; font-size:0.8rem; color:#8b949e;">
+            보유 카드: <span id="ai-cards-count">0</span> | 코어: <span id="ai-cores">0</span> | 마스터피스: <span id="ai-mp">X</span>
+        </div>
+    </div>
+
+    <div class="area">
+        <div class="area-header">🛒 고철 처리장 (Market)</div>
+        <div class="market-grid" id="market-area">
+            </div>
+    </div>
+
+    <div class="area" style="border-color: #2ea043;">
+        <div class="area-header">
+            <span>👤 당신 (Player)</span>
+            <span>VP: <span id="player-vp">0</span> / 15</span>
+        </div>
+        <div class="resource-bar" id="player-resources">
+            </div>
+        <div style="margin-top:5px; font-size:0.8rem; color:#8b949e;">
+            보유 보너스(할인): <span id="player-bonuses">없음</span>
+        </div>
+        <div style="margin-top:5px; font-size:0.8rem; color:var(--accent-core);">
+             보유 마스터피스: <span id="player-mp">X</span> (승리 필수 조건)
+        </div>
+        <div style="margin-top:5px; font-size:0.7rem; color:red;">
+            ⚠️ **자원 한도 8개** (새 규칙)
+        </div>
+    </div>
+
+    <div class="controls" style="grid-template-columns: 1fr 1fr 1fr;"> 
+        <button class="btn-scavenge" id="btn-scavenge" onclick="playerScavenge()">
+            🛠 부품 수집<br><span style="font-size:0.7rem">(랜덤 자원 3개 획득)</span>
+        </button>
+        <button class="btn-scavenge" id="btn-recycle" onclick="promptRecycle()" style="background:#58a6ff; color:black;">
+            ♻️ 자원 재활용<br><span style="font-size:0.7rem">(같은 자원 2개 → 다른 자원 1개)</span>
+        </button>
+        <div style="display:flex; align-items:center; justify-content:center; font-size:0.8rem; color:#8b949e; text-align:center;">
+            카드를 클릭하여 구매.<br>
+            자원 한도는 8개입니다.
+        </div>
+    </div>
+
+    <div id="game-log">
+        <div>시스템 가동... "극심한 희소성 프로토콜" 시작.</div>
+    </div>
+</div>
+
+<div id="modal">
+    <div class="modal-content">
+        <h2 id="modal-title">게임 종료</h2>
+        <p id="modal-msg">결과 내용</p>
+        <button onclick="location.reload()" style="background:var(--accent-core); color:black; margin-top:10px;">다시 하기</button>
+    </div>
+</div>
+
+<script>
+/**
+ * 게임 설정 및 데이터
+ */
+const TYPES = ['screw', 'wire', 'alloy', 'battery']; // 기본 자원
+const SPECIAL = 'core'; // 특수 자원
+const RESOURCE_CAP = 8; // **자원 최대 보유 한도 8개**
+
+// 카드 데이터 생성기 - 비용 상향 조정
+function generateDeck() {
+    let deck = [];
+    let idCounter = 0;
+
+    // Tier 1: 저비용, 무점수, 기본 자원 생산 (20장)
+    for(let i=0; i<20; i++) {
+        const type = TYPES[Math.floor(Math.random() * 4)];
+        deck.push({
+            id: idCounter++, tier: 1, type: type, vp: 0,
+            cost: { screw:1, wire:1, alloy:1, battery:1, core:0 }, // 비용 상향
+            isMp: false
+        });
+    }
+
+    // Tier 2: 중비용, 소량 점수 (15장)
+    for(let i=0; i<15; i++) {
+        const type = TYPES[Math.floor(Math.random() * 4)];
+        deck.push({
+            id: idCounter++, tier: 2, type: type, vp: Math.floor(Math.random() * 2) + 1,
+            cost: { screw: Math.floor(Math.random()*4), wire: Math.floor(Math.random()*4), alloy: Math.floor(Math.random()*4), battery: Math.floor(Math.random()*4), core: 0 },
+            isMp: false
+        });
+    }
+
+    // Tier 3: 고비용, 코어 생산 (매우 중요) - 10장
+    const CORE_COSTS = [
+        {screw: 5}, {wire: 5}, {alloy: 5}, {battery: 5},
+        {screw: 3, wire: 3, alloy: 3}, {battery: 3, wire: 3, alloy: 3},
+        {screw: 4, alloy: 4}
+    ];
+    for(let i=0; i<CORE_COSTS.length; i++) {
+        let cost = { screw:0, wire:0, alloy:0, battery:0, core:0, ...CORE_COSTS[i] };
+        deck.push({
+            id: idCounter++, tier: 3, type: SPECIAL, vp: 3,
+            cost: cost,
+            isMp: false
+        });
+    }
+
+    // Tier 4: 마스터피스 (승리 조건, 코어 필요) - 5장
+    // **비용 대폭 상향** (코어 5개 및 기본 자원 다수 요구)
+    for(let i=0; i<5; i++) {
+        deck.push({
+            id: idCounter++, tier: 4, type: 'mp', vp: 5,
+            cost: { screw: 2, wire: 2, alloy: 2, battery: 2, core: 5 }, 
+            isMp: true
+        });
+    }
+    
+    return deck.sort(() => Math.random() - 0.5);
+}
+
+/**
+ * 게임 상태 관리 및 렌더링 함수
+ */
+
+const state = {
+    turn: 'player', 
+    market: [],
+    deck: generateDeck(),
+    player: {
+        resources: { screw:0, wire:0, alloy:0, battery:0, core:0 },
+        bonus: { screw:0, wire:0, alloy:0, battery:0, core:0 },
+        vp: 0,
+        hasMp: false,
+        hand: []
+    },
+    ai: {
+        resources: { screw:0, wire:0, alloy:0, battery:0, core:0 },
+        bonus: { screw:0, wire:0, alloy:0, battery:0, core:0 },
+        vp: 0,
+        hasMp: false,
+        hand: []
+    }
+};
+
+function initMarket() {
+    let marketSlots = 8;
+    let mpIndex = state.deck.findIndex(c => c.tier === 4);
+    if(mpIndex > -1) {
+        state.market.push(state.deck.splice(mpIndex, 1)[0]);
+        marketSlots--;
+    }
+    
+    for(let i=0; i<marketSlots; i++) {
+        if(state.deck.length > 0) state.market.push(state.deck.shift());
+    }
+    state.market.sort((a,b) => a.tier - b.tier);
+}
+
+function render() {
+    document.getElementById('player-vp').innerText = state.player.vp;
+    document.getElementById('player-mp').innerText = state.player.hasMp ? "O (조건 충족)" : "X";
+    const pResDiv = document.getElementById('player-resources');
+    pResDiv.innerHTML = renderResources(state.player.resources);
+    
+    let bonusText = "";
+    TYPES.concat([SPECIAL]).forEach(t => {
+        if(state.player.bonus[t] > 0) bonusText += `${typeToIcon(t)}${state.player.bonus[t]} `;
+    });
+    document.getElementById('player-bonuses').innerText = bonusText || "없음";
+
+    document.getElementById('ai-vp').innerText = state.ai.vp;
+    document.getElementById('ai-cards-count').innerText = state.ai.hand.length;
+    document.getElementById('ai-cores').innerText = state.ai.bonus.core + state.ai.resources.core;
+    document.getElementById('ai-mp').innerText = state.ai.hasMp ? "O" : "X";
+    const aiResDiv = document.getElementById('ai-resources');
+    aiResDiv.innerHTML = renderResources(state.ai.resources);
+
+    const marketDiv = document.getElementById('market-area');
+    marketDiv.innerHTML = '';
+    state.market.forEach(card => {
+        const el = document.createElement('div');
+        el.className = 'card';
+        if (!canBuy(card, state.player)) el.classList.add('disabled');
+        
+        let typeColor = getResColor(card.type);
+        if(card.isMp) el.style.borderColor = "#fff";
+
+        el.innerHTML = `
+            <div class="tier-title">Tier ${card.tier} ${card.isMp ? '★MASTERPIECE' : ''}</div>
+            <div class="card-header">
+                <span class="card-bonus" style="background:${typeColor}">${typeToIcon(card.type)}</span>
+                <span class="card-vp">${card.vp > 0 ? card.vp : ''}</span>
+            </div>
+            <div class="cost-list">
+                ${renderCost(card.cost)}
+            </div>
+        `;
+        el.onclick = () => playerBuy(card);
+        marketDiv.appendChild(el);
+    });
+
+    const turnInd = document.getElementById('turn-indicator');
+    if(state.turn === 'player') {
+        turnInd.innerText = "당신의 턴 (행동을 선택하세요)";
+        turnInd.style.color = "#2ed573";
+        document.getElementById('btn-scavenge').disabled = false;
+    } else {
+        turnInd.innerText = "AI 생각 중...";
+        turnInd.style.color = "#f85149";
+        document.getElementById('btn-scavenge').disabled = true;
+    }
+}
+
+function renderResources(res) {
+    let html = '';
+    if(res.screw > 0) html += `<span class="res-badge res-screw">🔩 ${res.screw}</span>`;
+    if(res.wire > 0) html += `<span class="res-badge res-wire">🔌 ${res.wire}</span>`;
+    if(res.alloy > 0) html += `<span class="res-badge res-alloy">🛡️ ${res.alloy}</span>`;
+    if(res.battery > 0) html += `<span class="res-badge res-battery">🔋 ${res.battery}</span>`;
+    if(res.core > 0) html += `<span class="res-badge res-core">⚡️ ${res.core}</span>`;
+    return html;
+}
+
+function renderCost(cost) {
+    let html = '';
+    for(let [k, v] of Object.entries(cost)) {
+        for(let i=0; i<v; i++) {
+            let color = getResColor(k);
+            html += `<span class="cost-item" style="background:${color}"></span>`;
+        }
+    }
+    return html;
+}
+
+function getResColor(type) {
+    if(type === 'screw') return 'var(--accent-screw)';
+    if(type === 'wire') return 'var(--accent-wire)';
+    if(type === 'alloy') return 'var(--accent-alloy)';
+    if(type === 'battery') return 'var(--accent-battery)';
+    if(type === 'core' || type === 'mp') return 'var(--accent-core)';
+    return '#fff';
+}
+
+function typeToIcon(type) {
+    const icons = { screw:'🔩', wire:'🔌', alloy:'🛡️', battery:'🔋', core:'⚡️', mp:'👑' };
+    return icons[type] || '';
+}
+
+function log(msg) {
+    const logDiv = document.getElementById('game-log');
+    const line = document.createElement('div');
+    line.innerText = `> ${msg}`;
+    logDiv.appendChild(line);
+    logDiv.scrollTop = logDiv.scrollHeight;
+}
+
+/**
+ * 게임 로직
+ */
+
+function canBuy(card, actor) {
+    for(let resType in card.cost) {
+        let cost = card.cost[resType];
+        if(cost > 0) {
+            let discounted = Math.max(0, cost - (actor.bonus[resType] || 0));
+            if(actor.resources[resType] < discounted) return false;
+        }
+    }
+    return true;
+}
+
+function payCost(card, actor) {
+    for(let resType in card.cost) {
+        let cost = card.cost[resType];
+        if(cost > 0) {
+            let discounted = Math.max(0, cost - (actor.bonus[resType] || 0));
+            actor.resources[resType] -= discounted;
+        }
+    }
+}
+
+function checkWin(actorName) {
+    const actor = actorName === 'player' ? state.player : state.ai;
+    if (actor.vp >= 15 && actor.hasMp) {
+        let msg = actorName === 'player' ? "축하합니다! 폐기장의 제왕이 되셨습니다." : "패배했습니다. AI가 시장을 장악했습니다.";
+        document.getElementById('modal-title').innerText = actorName === 'player' ? "VICTORY" : "DEFEAT";
+        document.getElementById('modal-msg').innerText = msg;
+        document.getElementById('modal').style.display = 'flex';
+        return true;
+    }
+    return false;
+}
+
+// **플레이어 행동: 자원 수집**
+function playerScavenge() {
+    if(state.turn !== 'player') return;
+    
+    let total = Object.values(state.player.resources).reduce((a,b)=>a+b, 0);
+    if(total >= RESOURCE_CAP) {
+        log(`[경고] 창고 한도(${RESOURCE_CAP}개) 초과! 카드를 구매하거나 재활용하세요.`);
+        return;
+    }
+
+    let gained = [];
+    let pool = [...TYPES];
+    
+    for(let i=0; i<3; i++) {
+        if(pool.length === 0) break;
+        let randomIndex = Math.floor(Math.random() * pool.length);
+        let resource = pool[randomIndex];
+        
+        state.player.resources[resource]++;
+        gained.push(resource);
+
+        let count = gained.filter(r => r === resource).length;
+        if(count >= 2) {
+             pool = pool.filter(r => r !== resource);
+        }
+    }
+
+    let gainText = gained.map(typeToIcon).join(' ');
+    log(`부품 수집 완료: ${gainText}`);
+    endTurn();
+}
+
+// **플레이어 행동: 재활용 (Deadlock 해제 액션)**
+function promptRecycle() {
+    if(state.turn !== 'player') return;
+
+    let availableText = TYPES.map(t => `${typeToIcon(t)}: ${state.player.resources[t]}`).join(' | ');
+    log(`[재활용] 현재 자원: ${availableText}`);
+    
+    let input = prompt(`[재활용 액션]
+    같은 자원 2개를 소모하여 다른 자원 1개를 얻습니다.
+    
+    1. 소모할 자원 입력 (예: screw)
+    2. 얻을 자원 입력 (예: wire)
+    
+    입력 형식: [소모자원]/[획득자원] (예: screw/wire)
+    `);
+
+    if (!input) {
+        log("재활용 취소.");
+        return;
+    }
+
+    const parts = input.toLowerCase().split('/');
+    if (parts.length !== 2) {
+        log("잘못된 입력 형식입니다. '소모자원/획득자원' 형식으로 입력해주세요.");
+        return;
+        
+    }
+
+    const [discardType, gainType] = parts;
+
+    if (!TYPES.includes(discardType) || !TYPES.includes(gainType) || discardType === gainType) {
+        log("유효하지 않은 자원입니다. (screw, wire, alloy, battery 중 선택)");
+        return;
+    }
+
+    if (state.player.resources[discardType] < 2) {
+        log(`${typeToIcon(discardType)} ${discardType} 자원이 2개 미만입니다.`);
+        return;
+    }
+    
+    // 교환 실행
+    state.player.resources[discardType] -= 2;
+    state.player.resources[gainType] += 1;
+    log(`재활용 성공: ${typeToIcon(discardType)} 2개 소모 -> ${typeToIcon(gainType)} 1개 획득`);
+    
+    // 자원 한도 체크 (재활용은 한도가 자동으로 낮아지므로 사실상 불필요)
+    let total = Object.values(state.player.resources).filter((_, i) => i < 4).reduce((a,b)=>a+b,0);
+    if(total > RESOURCE_CAP) {
+        log("[경고] 재활용 후 자원 한도 초과! 시스템 오류 감지.");
+        let maxRes = TYPES.reduce((a, b) => state.player.resources[a] > state.player.resources[b] ? a : b);
+        state.player.resources[maxRes]--;
+    }
+    
+    endTurn();
+}
+
+
+function playerBuy(card) {
+    if(state.turn !== 'player') return;
+    if(!canBuy(card, state.player)) {
+        log("자원이 부족합니다.");
+        return;
+    }
+
+    payCost(card, state.player);
+    
+    if(card.isMp) {
+        state.player.hasMp = true;
+        log("!!! 마스터피스 획득 !!!");
+    } else {
+        state.player.bonus[card.type]++;
+    }
+    state.player.vp += card.vp;
+    state.player.hand.push(card);
+    
+    state.market = state.market.filter(c => c.id !== card.id);
+    if(state.deck.length > 0) state.market.push(state.deck.shift());
+    state.market.sort((a,b) => a.tier - b.tier);
+
+    log(`카드 구매 완료: Tier ${card.tier} (VP+${card.vp})`);
+    
+    if(!checkWin('player')) endTurn();
+}
+
+function endTurn() {
+    state.turn = 'ai';
+    render();
+    setTimeout(aiTurn, 1000);
+}
+
+// AI 보조 함수: 플레이어가 카드를 구매하기 위해 얼마나 많은 자원이 부족한지 계산
+function getMissingResources(card, actor) {
+    let missing = {};
+    let totalMissing = 0;
+    for(let resType in card.cost) {
+        let cost = card.cost[resType];
+        if(cost > 0) {
+            let discounted = Math.max(0, cost - (actor.bonus[resType] || 0));
+            let needed = discounted - actor.resources[resType];
+            if(needed > 0) {
+                missing[resType] = needed;
+                totalMissing += needed;
+            }
+        }
+    }
+    return { missing, totalMissing };
+}
+
+function endTurnAI() {
+    // 자원 한도 초과 시 버리기 (가장 많은 자원 버림)
+    let totalRes = Object.values(state.ai.resources).filter((_, i) => i < 4).reduce((a,b)=>a+b,0);
+    while(totalRes > RESOURCE_CAP) {
+        let maxRes = TYPES.reduce((a, b) => state.ai.resources[a] > state.ai.resources[b] ? a : b);
+        state.ai.resources[maxRes]--;
+        totalRes--;
+    }
+
+    state.turn = 'player';
+    render();
+}
+
+function aiBuy(card) {
+    payCost(card, state.ai);
+    if(card.isMp) {
+        state.ai.hasMp = true;
+        log("AI: [경고] 마스터피스 구매 완료.");
+    } else {
+        state.ai.bonus[card.type]++;
+    }
+    state.ai.vp += card.vp;
+    state.ai.hand.push(card);
+
+    state.market = state.market.filter(c => c.id !== card.id);
+    if(state.deck.length > 0) state.market.push(state.deck.shift());
+    state.market.sort((a,b) => a.tier - b.tier);
+
+    log(`AI: 카드 구매 (VP+${card.vp})`);
+    
+    if(!checkWin('ai')) {
+        state.turn = 'player';
+        render();
+    }
+}
+
+
+/**
+ * 🤖 AI 로직 (The Scavenger Bot) - 승리 지향 우선순위 적용 (재활용 로직 포함)
+ */
+function aiTurn() {
+    const ai = state.ai;
+    const player = state.player;
+    
+    // 1. 🥇 1순위: 승리 가능한지 체크 (마스터피스 구매 가능?)
+    const winConditionCard = state.market.find(c => c.isMp && canBuy(c, ai));
+    if (winConditionCard) {
+        log("AI: [1순위] 마스터피스 구매로 승리 시도.");
+        aiBuy(winConditionCard); 
+        return;
+    }
+
+    // 2. 🥈 2순위: 구매 가능한 카드 중 최적의 카드 찾기 (자기 성장)
+    let bestCard = null;
+    let bestScore = -1;
+
+    state.market.forEach(card => {
+        if(canBuy(card, ai)) {
+            let score = card.vp * 2;
+            if(card.type === 'core') score += 10; 
+            if(card.tier === 1) score += 1; 
+            
+            if(score > bestScore) {
+                bestScore = score;
+                bestCard = card;
+            }
+        }
+    });
+
+    if (bestCard) {
+        log(`AI: [2순위] Tier ${bestCard.tier} 카드 구매로 성장.`);
+        aiBuy(bestCard);
+        return;
+    }
+    
+    // 3. 🥉 3순위: 재활용, 견제 또는 자원 수집
+
+    // A. AI 재활용 체크 (자기 성장이 막혔을 때, 자원 구성을 바꿔 구매를 시도)
+    const targetCoreCard = state.market.find(c => c.type === 'core' && !canBuy(c, ai));
+
+    if (targetCoreCard) {
+        const { missing: aiMissing } = getMissingResources(targetCoreCard, ai);
+        const neededType = Object.keys(aiMissing).find(t => aiMissing[t] === 1); // 1개만 부족한 경우
+        const excessType = TYPES.find(t => ai.resources[t] >= 2 && t !== neededType); // 2개 이상 가진 자원
+
+        if (neededType && excessType) {
+            
+            // 재활용 후 구매 가능한지 (시뮬레이션 체크)
+            let tempAI = JSON.parse(JSON.stringify(ai));
+            tempAI.resources[excessType] -= 2;
+            tempAI.resources[neededType] += 1;
+            
+            if (canBuy(targetCoreCard, tempAI)) {
+                ai.resources[excessType] -= 2;
+                ai.resources[neededType] += 1;
+                log(`AI: [3순위/재활용] ${typeToIcon(excessType)} 2개 소모하여 ${typeToIcon(neededType)} 1개 획득, 구매 시도.`);
+                
+                // 재활용 후 바로 구매 시도 (턴 소모 최소화)
+                if(canBuy(targetCoreCard, ai)) {
+                    aiBuy(targetCoreCard);
+                } else {
+                    endTurnAI();
+                }
+                return;
+            }
+        }
+    }
+
+
+    // B. 플레이어 견제 체크 (핵심 카드 구매 직전이라면)
+    let playerNearBuy = null;
+    let minMissingTurns = 99;
+    
+    state.market.forEach(card => {
+        const { totalMissing } = getMissingResources(card, player);
+        if (totalMissing > 0 && totalMissing <= 2 && card.tier >= 3) {
+            if (totalMissing < minMissingTurns) {
+                minMissingTurns = totalMissing;
+                playerNearBuy = card;
+            }
+        }
+    });
+    
+    if (playerNearBuy) {
+        const { missing } = getMissingResources(playerNearBuy, player);
+        const targetRes = Object.keys(missing).find(r => missing[r] > 0);
+        
+        if (targetRes && ai.resources[targetRes] < RESOURCE_CAP) {
+            ai.resources[targetRes]++;
+            log(`AI: [3순위/견제] 플레이어의 자원 ${typeToIcon(targetRes)}을(를) 선점.`);
+            endTurnAI();
+            return;
+        }
+    }
+
+    // C. AI 성장 목표를 위한 자원 수집 (평상시 행동)
+    let needed = [];
+    const targetCard = state.market.find(c => c.type === 'core' && !canBuy(c, ai)) || 
+                       state.market.find(c => c.vp > 0 && !canBuy(c, ai)) ||
+                       state.market[0];
+
+    if(targetCard) {
+        const { missing } = getMissingResources(targetCard, ai);
+        const sortedMissing = Object.entries(missing).sort(([,a],[,b]) => b-a);
+        needed = sortedMissing.slice(0, 3).map(([key]) => key);
+    }
+
+    let collectedCount = 0;
+    while(collectedCount < 3) {
+        let pick = needed.length > 0 ? needed.shift() : TYPES[Math.floor(Math.random() * 4)];
+        
+        if (ai.resources[pick] < RESOURCE_CAP) {
+            ai.resources[pick]++;
+            collectedCount++;
+        } else {
+            break;
+        }
+    }
+    
+    log("AI: [3순위/성장] 목표 달성을 위한 자원 수집.");
+    endTurnAI();
+}
+
+
+// 초기화 실행
+initMarket();
+render();
+
+</script>
+</body>
+</html>
