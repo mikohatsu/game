@@ -31,13 +31,18 @@ jobs:
         working-directory: ./text_dungeon_react
         run: npm run build
 
+      - name: Prepare deployment directory
+        run: |
+          mkdir -p deploy/text_dungeon
+          cp -r text_dungeon_react/dist/* deploy/text_dungeon/
+
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: './deploy'
 
   deploy:
     environment:

@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/game/',
+  base: '/text_dungeon/',
   build: {
-    outDir: '../dist/text-dungeon'
+    outDir: 'dist'
   }
 })
