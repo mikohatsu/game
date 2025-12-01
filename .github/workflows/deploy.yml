@@ -36,7 +36,7 @@ jobs:
           mkdir -p deploy/text_dungeon
           cp -r text_dungeon_react/dist/* deploy/text_dungeon/
           cp index.html deploy/
-          cp -r chess_arena crafters_forge junk_beat neo_junk_market spaceship_engineer deploy/
+          cp -r chess_arena crafters_forge junk_beat neo_junk_market spaceship_engineer text_dungeon deploy/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
