@@ -1,0 +1,139 @@
+@import "tailwindcss";
+
+@theme {
+  --color-dungeon-dark: #121212;
+  --color-dungeon-darker: #0d0d0d;
+  --color-dungeon-panel: #1e1e1e;
+  --color-dungeon-border: #333;
+  --color-dungeon-accent: #ff9800;
+  --color-dungeon-danger: #ef5350;
+  --color-dungeon-heal: #66bb6a;
+  --color-dungeon-rare: #42a5f5;
+  --color-dungeon-epic: #ab47bc;
+  --color-dungeon-legend: #ffca28;
+  --color-dungeon-boss: #b71c1c;
+
+  --animate-bounce-item: bounce-item 1.5s infinite ease-in-out;
+  --animate-pulse-glow: pulse-glow 2s infinite;
+  --animate-slide-up: slide-up 0.3s ease-out;
+  --animate-shake: shake 0.5s ease-in-out;
+  --animate-damage-pop: damage-pop 1s ease-out;
+  --animate-heal-fade: heal-fade 1s ease-out;
+  --animate-hit-flash: hit-flash 0.3s ease-in-out;
+  --animate-enemy-hit: enemy-hit 0.5s ease-in-out;
+}
+
+@keyframes bounce-item {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(255, 152, 0, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(255, 152, 0, 0.8); }
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes damage-pop {
+  0% {
+    transform: scale(0) translateY(0);
+    opacity: 0;
+  }
+  10% {
+    transform: scale(1.5) translateY(-20px);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2) translateY(-40px);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8) translateY(-80px);
+    opacity: 0;
+  }
+}
+
+@keyframes heal-fade {
+  0% {
+    transform: scale(0.8) translateY(10px);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.1) translateY(0);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1) translateY(-20px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.9) translateY(-40px);
+    opacity: 0;
+  }
+}
+
+@keyframes hit-flash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.4);
+  }
+}
+
+@keyframes enemy-hit {
+  0%, 100% {
+    transform: scale(1);
+  }
+  20% {
+    transform: scale(1.15);
+  }
+  40% {
+    transform: scale(0.95);
+  }
+  60% {
+    transform: scale(1.05);
+  }
+  80% {
+    transform: scale(1);
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-dungeon-dark text-gray-200 font-sans antialiased;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-6 py-3 bg-dungeon-accent text-black font-bold rounded-lg
+           hover:bg-orange-600 active:scale-95 transition-all duration-200
+           shadow-lg hover:shadow-orange-500/50;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 bg-gray-700 text-white font-bold rounded-lg
+           hover:bg-gray-600 active:scale-95 transition-all duration-200;
+  }
+
+  .panel {
+    @apply bg-dungeon-panel border border-dungeon-border rounded-xl p-6
+           shadow-2xl backdrop-blur-sm;
+  }
+
+  .stat-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-semibold
+           text-sm shadow-md;
+  }
+}
