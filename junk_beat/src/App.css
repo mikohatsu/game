@@ -316,6 +316,12 @@
   transform: translateY(2px);
 }
 
+.btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .btn.secondary {
   background: rgba(255, 255, 255, 0.04);
 }
@@ -374,15 +380,22 @@
 
 .float-container {
   position: relative;
-  min-height: 40px;
+  min-height: 56px;
 }
 
 .float {
   position: absolute;
-  animation: floatUp 1s ease-out forwards;
-  font-weight: 700;
+  animation: floatUp 1.05s ease-out forwards;
+  font-weight: 800;
   color: #fff;
-  text-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+  font-size: 26px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  background: rgba(10, 10, 14, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  text-shadow: 0 0 18px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
 }
 
 .float.damage {
@@ -438,17 +451,46 @@
   overflow: auto;
 }
 
+.fusion-zone { display: grid; gap: 12px; }
+.fusion-slots {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.fusion-slot {
+  flex: 1;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.18);
+}
+.slot-label { color: var(--text-sub); font-size: 12px; margin-bottom: 4px; }
+.slot-body { font-weight: 700; }
+.fusion-plus, .fusion-arrow {
+  color: var(--text-sub);
+  font-weight: 700;
+}
+
 .fusion-item {
   padding: 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 .fusion-item.active {
   border-color: var(--glow-cyan);
   box-shadow: 0 0 10px rgba(106, 228, 255, 0.16);
 }
+.fusion-name { font-weight: 700; }
+.fusion-copy { color: var(--text-sub); font-size: 12px; }
 
 .glossary-row {
   display: flex;
@@ -464,7 +506,11 @@
   background: rgba(255, 255, 255, 0.03);
 }
 
+.reward-choice { text-align: left; }
+.choice-title { font-weight: 700; }
+.choice-help { color: var(--text-sub); font-size: 12px; }
+
 @keyframes floatUp {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(-30px); }
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(-38px) scale(1.05); }
 }

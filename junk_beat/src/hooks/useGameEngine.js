@@ -343,7 +343,7 @@ export const useGameEngine = () => {
 
   const handleRewardChoice = (option) => {
     if (!reward) return
-    if (option === 'card') setReward((r) => ({ ...r, stage: 'add' }))
+    if (option === 'card') setReward((r) => ({ ...r, stage: 'card' }))
     if (option === 'fusion') setReward((r) => ({ ...r, stage: 'fusion' }))
     if (option === 'upgrade') setReward((r) => ({ ...r, stage: 'upgrade' }))
     if (option === 'relic') setReward((r) => ({ ...r, stage: 'relic' }))
