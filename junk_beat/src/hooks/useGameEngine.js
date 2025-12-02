@@ -15,6 +15,8 @@ export const useGameEngine = () => {
   const [discard, setDiscard] = useState([])
   const [hand, setHand] = useState([])
   const [energy, setEnergy] = useState(BASE_ENERGY)
+  const [fusionCooldown, setFusionCooldown] = useState(0)
+  const [upgradeCooldown, setUpgradeCooldown] = useState(0)
   const [turn, setTurn] = useState(1)
   const [player, setPlayer] = useState({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0, drawNext: 0 } })
   const [enemyIndex, setEnemyIndex] = useState(0)
@@ -245,8 +247,12 @@ export const useGameEngine = () => {
       addFloating(-heatDmg, 'damage', 'player')
       addLog(`과열로 ${heatDmg} 피해를 입었다`)
     }
+    setDiscard((prev) => [...prev, ...hand])
+    setHand([])
     resolveEnemy()
     setTurn((t) => t + 1)
+    setFusionCooldown((c) => Math.max(0, c - 1))
+    setUpgradeCooldown((c) => Math.max(0, c - 1))
     drawCards(5 + drawNext)
   }
 
@@ -279,8 +285,8 @@ export const useGameEngine = () => {
     const availableArtifacts = artifactList.filter((a) => !artifacts.includes(a.id))
     const relicOptions = relicRoll ? shuffle(availableArtifacts).slice(0, isBoss ? 3 : 1) : []
     const cardOffers = shuffle(rewardPool).slice(0, 3)
-    const fusionReady = turn % 4 === 0
-    const upgradeReady = turn % 3 === 0
+    const fusionReady = fusionCooldown <= 0
+    const upgradeReady = upgradeCooldown <= 0
 
     setReward({
       stage: 'choice',
@@ -430,6 +436,7 @@ export const useGameEngine = () => {
         if (!prev.includes(key)) setNewFusionUnlock({ key, result: recipeResult })
         return updated
       })
+      setFusionCooldown(4)
       finalizeReward(updatedCollection)
       return
     }
@@ -447,6 +454,7 @@ export const useGameEngine = () => {
       },
     }
     addLog('전용 조합 없음: 능력 합산 융합')
+    setFusionCooldown(4)
     setCustomCards((prev) => ({ ...prev, [newId]: newCard }))
     setFusionSources((prev) => ({ ...prev, [newId]: [mainId, subId] }))
     const updatedCollection = (() => {
@@ -489,6 +497,7 @@ export const useGameEngine = () => {
       setDeck(shuffle(updatedCollection))
       setDiscard([])
       setHand([])
+      setUpgradeCooldown(3)
       finalizeReward(updatedCollection)
       return
     } else {
@@ -527,6 +536,7 @@ export const useGameEngine = () => {
       setDeck(shuffle(updatedCollection))
       setDiscard([])
       setHand([])
+      setUpgradeCooldown(3)
       finalizeReward(updatedCollection)
       return
     }
