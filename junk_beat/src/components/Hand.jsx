@@ -9,7 +9,7 @@ export default function Hand({ hand, cardLibrary, energy, onPlayCard }) {
         {hand.map((cardId, idx) => {
           const card = cardLibrary[cardId]
           const blocked = energy < card.energy
-          return <Card key={`${cardId}-${idx}`} card={card} disabled={blocked} onPlay={() => onPlayCard(cardId, idx)} />
+          return <Card key={`${cardId}-${idx}`} cardId={cardId} card={card} disabled={blocked} onPlay={() => onPlayCard(cardId, idx)} />
         })}
       </div>
     </div>

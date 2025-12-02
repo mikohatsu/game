@@ -5,8 +5,6 @@ import { bossEnemy, enemies, specialEnemies } from '../data/enemies'
 import { shuffle } from '../utils/shuffle'
 
 const BASE_ENERGY = 3
-const fusionKeys = Object.keys(fusionRecipes)
-const fusionPoolIds = Object.values(fusionRecipes)
 
 const createFusionKey = (a, b) => [a, b].sort().join('+')
 
@@ -34,6 +32,7 @@ export const useGameEngine = () => {
   const [fusionSources, setFusionSources] = useState({})
   const [artifacts, setArtifacts] = useState([])
   const [encounter, setEncounter] = useState(1)
+  const [fusionCodex, setFusionCodex] = useState([])
   const floatId = useRef(0)
 
   const mergedCards = useMemo(() => ({ ...cardLibrary, ...fusionCards, ...customCards }), [customCards])
@@ -277,7 +276,8 @@ export const useGameEngine = () => {
 
   const restart = () => {
     setReward(null)
-    setDeck(shuffle(collection))
+    const freshDeck = shuffle(collection)
+    setDeck(freshDeck)
     setDiscard([])
     setHand([])
     setEnergy(energyCap)
@@ -288,7 +288,7 @@ export const useGameEngine = () => {
     pickEnemy(encounter)
     setIntentStep(0)
     setLog(['시스템을 재부팅했다.'])
-    drawCards(5)
+    setTimeout(() => drawCards(5), 0)
   }
 
   const pickEnemy = (enc) => {
@@ -321,14 +321,16 @@ export const useGameEngine = () => {
     })
   }
 
-  const nextEnemy = () => {
+  const nextEnemy = (collectionOverride) => {
+    const sourceCollection = collectionOverride || collection
+    const freshDeck = shuffle(sourceCollection)
     setEncounter((c) => {
       const next = c + 1
       pickEnemy(next)
       return next
     })
     setReward(null)
-    setDeck(shuffle(collection))
+    setDeck(freshDeck)
     setDiscard([])
     setHand([])
     setEnergy(energyCap)
@@ -338,7 +340,7 @@ export const useGameEngine = () => {
     setPlayer({ hp: baseHp, maxHp: baseHp, block: baseBlock, statuses: { boost: 0, heat: 0, drawNext: 0 } })
     setIntentStep(0)
     setLog(['새 적을 찾았다.'])
-    drawCards(5)
+    setTimeout(() => drawCards(5), 0)
   }
 
   const handleRewardChoice = (option) => {
@@ -356,7 +358,7 @@ export const useGameEngine = () => {
     setDiscard([])
     setHand([])
     addLog(`${mergedCards[cardId].name} 추가`)
-    finalizeReward()
+    finalizeReward(updated)
   }
 
   const fuseCardLegacy = (cardId) => {
@@ -387,8 +389,8 @@ export const useGameEngine = () => {
     const recipeResult = fusionRecipes[key]
     if (recipeResult && fusionCards[recipeResult]) {
       // 전용 융합 카드
-      setCollection((prev) => {
-        const copy = [...prev]
+      const updatedCollection = (() => {
+        const copy = [...collection]
         let removed = 0
         for (let i = 0; i < copy.length && removed < 2; i++) {
           if (copy[i] === mainId || copy[i] === subId) {
@@ -399,13 +401,15 @@ export const useGameEngine = () => {
         }
         copy.push(recipeResult)
         return copy
-      })
+      })()
+      setCollection(updatedCollection)
       setFusionSources((prev) => ({ ...prev, [recipeResult]: [mainId, subId] }))
-      setDeck((prev) => shuffle(prev))
+      setDeck(shuffle(updatedCollection))
       setDiscard([])
       setHand([])
       addLog(`전용 융합: ${fusionCards[recipeResult].name}`)
-      finalizeReward()
+      setFusionCodex((prev) => (prev.includes(key) ? prev : [...prev, key]))
+      finalizeReward(updatedCollection)
       return
     }
     const newId = `fusion-${Date.now()}-${Math.floor(Math.random() * 999)}`
@@ -421,10 +425,11 @@ export const useGameEngine = () => {
         sub.play?.(ctx)
       },
     }
+    addLog('전용 조합 없음: 능력 합산 융합')
     setCustomCards((prev) => ({ ...prev, [newId]: newCard }))
     setFusionSources((prev) => ({ ...prev, [newId]: [mainId, subId] }))
-    setCollection((prev) => {
-      const copy = [...prev]
+    const updatedCollection = (() => {
+      const copy = [...collection]
       let removed = 0
       for (let i = 0; i < copy.length && removed < 2; i++) {
         if (copy[i] === mainId || copy[i] === subId) {
@@ -435,12 +440,13 @@ export const useGameEngine = () => {
       }
       copy.push(newId)
       return copy
-    })
-    setDeck((prev) => shuffle(prev))
+    })()
+    setCollection(updatedCollection)
+    setDeck(shuffle(updatedCollection))
     setDiscard([])
     setHand([])
     addLog(`융합 완료: ${newCard.name}`)
-    finalizeReward()
+    finalizeReward(updatedCollection)
   }
 
   const upgradeCard = (cardId) => {
@@ -451,13 +457,19 @@ export const useGameEngine = () => {
     }
     const upgraded = upgradeMap[cardId]
     if (upgraded) {
-      setCollection((prev) => {
-        const copy = [...prev]
+      const updatedCollection = (() => {
+        const copy = [...collection]
         const idx = copy.indexOf(cardId)
         if (idx >= 0) copy[idx] = upgraded
         return copy
-      })
+      })()
+      setCollection(updatedCollection)
       addLog(`${mergedCards[cardId].name} 강화 완료`)
+      setDeck(shuffle(updatedCollection))
+      setDiscard([])
+      setHand([])
+      finalizeReward(updatedCollection)
+      return
     } else {
       // 수치 강화 카드 생성
       const base = mergedCards[cardId]
@@ -483,18 +495,20 @@ export const useGameEngine = () => {
         },
       }
       setCustomCards((prev) => ({ ...prev, [newId]: wrapped }))
-      setCollection((prev) => {
-        const copy = [...prev]
+      const updatedCollection = (() => {
+        const copy = [...collection]
         const idx = copy.indexOf(cardId)
         if (idx >= 0) copy[idx] = newId
         return copy
-      })
+      })()
+      setCollection(updatedCollection)
       addLog(`${base.name} 강화(수치) 완료`)
+      setDeck(shuffle(updatedCollection))
+      setDiscard([])
+      setHand([])
+      finalizeReward(updatedCollection)
+      return
     }
-    setDeck((prev) => shuffle(prev))
-    setDiscard([])
-    setHand([])
-    finalizeReward()
   }
 
   const gainArtifact = (artifactId) => {
@@ -503,9 +517,9 @@ export const useGameEngine = () => {
     finalizeReward()
   }
 
-  const finalizeReward = () => {
+  const finalizeReward = (collectionOverride) => {
     setReward(null)
-    nextEnemy()
+    nextEnemy(collectionOverride)
   }
 
   const deckList = collection
@@ -514,6 +528,7 @@ export const useGameEngine = () => {
     cards: mergedCards,
     deckList,
     fusionSources,
+    fusionCodex,
     reward,
     hand,
     energy,

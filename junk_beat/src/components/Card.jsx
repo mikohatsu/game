@@ -1,4 +1,5 @@
 import { glossary } from '../data/glossary'
+import { getCardArt } from '../assets/cardArt'
 
 const extractKeywords = (desc) => {
   const pairs = []
@@ -17,12 +18,16 @@ const rarityClass = (rarity) => {
   return 'card-common'
 }
 
-export default function Card({ card, disabled, onPlay }) {
+export default function Card({ cardId, card, disabled, onPlay }) {
   const keywords = extractKeywords(card.desc || '')
   const lines = (card.desc || '').split(/\n|,/).map((t) => t.trim())
+  const art = getCardArt(cardId || card?.name || 'card')
   return (
     <div className={`card ${disabled ? 'disabled' : ''} ${rarityClass(card.rarity)}`} onClick={!disabled ? onPlay : undefined}>
       <div className="card-energy">{card.energy}</div>
+      <div className="card-illustration" style={{ background: art.bg }}>
+        <span className="card-illustration-icon" role="img" aria-hidden>{art.icon}</span>
+      </div>
       <div className={`card-type ${card.type === '공격' ? 'type-attack' : card.type === '방어' ? 'type-방어' : 'type-부스트'}`}>
         {card.type}
       </div>

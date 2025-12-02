@@ -1,17 +1,22 @@
+import { useState } from 'react'
 import EnemyPanel from './components/EnemyPanel'
 import PlayerPanel from './components/PlayerPanel'
 import Hand from './components/Hand'
 import { Timeline, Log } from './components/TimelineLog'
 import DeckPanel from './components/DeckPanel'
 import RewardModal from './components/RewardModal'
+import FusionCodex from './components/FusionCodex'
+import { fusionRecipes } from './data/cards'
 import { useGameEngine } from './hooks/useGameEngine'
 import './App.css'
 
 export default function App() {
+  const [codexOpen, setCodexOpen] = useState(false)
   const {
     cards,
     deckList,
     fusionSources,
+    fusionCodex,
     reward,
     hand,
     energy,
@@ -40,7 +45,10 @@ export default function App() {
           <h1>Junk Beat</h1>
           <div className="badge">디스토피아 스크랩 필드 · 기계 반란 생존</div>
         </div>
-        <div className="badge">Turn {turn}</div>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button className="btn secondary" onClick={() => setCodexOpen(true)}>📕 조합표</button>
+          <div className="badge">Turn {turn}</div>
+        </div>
       </div>
 
       <div className="grid">
@@ -72,6 +80,7 @@ export default function App() {
         onRelic={gainArtifact}
         cards={cards}
       />
+      <FusionCodex open={codexOpen} onClose={() => setCodexOpen(false)} recipes={fusionRecipes} discovered={fusionCodex} cards={cards} />
     </div>
   )
 }

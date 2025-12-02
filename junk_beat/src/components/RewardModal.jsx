@@ -14,8 +14,8 @@ export default function RewardModal({ reward, onChoice, onSelectCard, onFuseTwo,
     if (!reward) return []
     return [
       { key: 'card', label: '카드 추가', available: (reward.cardOffers || []).length > 0 },
-      { key: 'fusion', label: '융합', available: deckList.length > 1 },
-      { key: 'upgrade', label: '강화', available: deckList.length > 0 },
+      { key: 'fusion', label: '융합', available: reward.fusionReady && deckList.length > 1 },
+      { key: 'upgrade', label: '강화', available: reward.upgradeReady && deckList.length > 0 },
       { key: 'relic', label: '유물 획득', available: (reward.relicOptions || []).length > 0 },
     ]
   }, [deckList.length, reward])
@@ -37,7 +37,7 @@ export default function RewardModal({ reward, onChoice, onSelectCard, onFuseTwo,
     <div className="reward-grid">
       {(reward.cardOffers || []).map((id) => (
         <div key={id} className="card-offer" onClick={() => onSelectCard(id)}>
-          <Card card={cards[id]} disabled={false} onPlay={() => onSelectCard(id)} />
+          <Card cardId={id} card={cards[id]} disabled={false} onPlay={() => onSelectCard(id)} />
         </div>
       ))}
     </div>
@@ -53,11 +53,14 @@ export default function RewardModal({ reward, onChoice, onSelectCard, onFuseTwo,
       if (fusionPick.length < 2) {
         const next = [...fusionPick, idx]
         setFusionPick(next)
-        if (next.length === 2) {
-          const [aIdx, bIdx] = next
-          onFuseTwo(deckList[aIdx], deckList[bIdx])
-          setFusionPick([])
-        }
+      }
+    }
+
+    const confirm = () => {
+      if (fusionPick.length === 2) {
+        const [aIdx, bIdx] = fusionPick
+        onFuseTwo(deckList[aIdx], deckList[bIdx])
+        setFusionPick([])
       }
     }
 
@@ -74,6 +77,7 @@ export default function RewardModal({ reward, onChoice, onSelectCard, onFuseTwo,
             <div className="slot-body">{selectedCards[1] || '비어 있음'}</div>
           </div>
           <div className="fusion-arrow">→ 합성</div>
+          <button className="btn fusion-confirm" disabled={fusionPick.length !== 2} onClick={confirm}>확인</button>
         </div>
         <div className="hint">동일 이름 카드도 각 장을 따로 선택할 수 있습니다.</div>
         <div className="fusion-list">
