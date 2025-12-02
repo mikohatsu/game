@@ -1,10 +1,12 @@
+import { intentGlossary } from '../data/glossary'
+
 export function Timeline({ timeline }) {
   return (
     <div>
       <p className="section-title">패턴</p>
       <div className="timeline">
         {timeline.map((item, idx) => (
-          <div key={idx} className="timeline-chip">
+          <div key={idx} className="timeline-chip" title={item.detail || intentGlossary[item.intent]?.desc}>
             {item.active ? '▶ ' : ''}
             {item.label}
           </div>

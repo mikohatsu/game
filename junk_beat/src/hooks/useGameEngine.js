@@ -1,11 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { cardLibrary, initialDeck } from '../data/cards'
+import { cardLibrary, initialDeck, rewardPool } from '../data/cards'
 import { enemies } from '../data/enemies'
 import { shuffle } from '../utils/shuffle'
 
 const BASE_ENERGY = 3
+const pickOffers = () => shuffle(rewardPool).slice(0, 3)
+const upgradeMap = {
+  rustSlice: 'rustSlicePlus',
+  makeshiftGuard: 'makeshiftGuardPlus',
+  pulseWeak: 'pulseWeakPlus',
+}
 
 export const useGameEngine = () => {
+  const [collection, setCollection] = useState(initialDeck)
   const [deck, setDeck] = useState(() => shuffle(initialDeck))
   const [discard, setDiscard] = useState([])
   const [hand, setHand] = useState([])
@@ -13,10 +20,16 @@ export const useGameEngine = () => {
   const [turn, setTurn] = useState(1)
   const [player, setPlayer] = useState({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0 } })
   const [enemyIndex, setEnemyIndex] = useState(0)
-  const [enemy, setEnemy] = useState(() => ({ ...enemies[0], hp: enemies[0].maxHp, block: 0, statuses: { vulnerable: 0, jammed: 0 } }))
+  const [enemy, setEnemy] = useState(() => ({
+    ...enemies[0],
+    hp: enemies[0].maxHp,
+    block: 0,
+    statuses: { vulnerable: 0, jammed: 0 },
+  }))
   const [intentStep, setIntentStep] = useState(0)
   const [log, setLog] = useState(['폐허 된 공장에서 기계들의 비트가 울린다.'])
   const [floating, setFloating] = useState([])
+  const [reward, setReward] = useState(null)
   const floatId = useRef(0)
 
   useEffect(() => {
@@ -25,7 +38,7 @@ export const useGameEngine = () => {
 
   const currentIntent = useMemo(() => enemy.pattern[intentStep % enemy.pattern.length], [enemy.pattern, intentStep])
   const timeline = useMemo(
-    () => enemy.pattern.map((step, idx) => ({ label: step.note, active: idx === intentStep })),
+    () => enemy.pattern.map((step, idx) => ({ label: step.note, active: idx === intentStep, detail: step.desc, intent: step.intent })),
     [enemy.pattern, intentStep],
   )
 
@@ -75,8 +88,16 @@ export const useGameEngine = () => {
       const finalDmg = Math.max(0, dmg - blocked)
       const hp = Math.max(0, prev.hp - finalDmg)
       addFloating(-dmg, 'damage', 'enemy')
-      addLog(`▶ 공격 ${dmg} 피해 (${blocked} 차단)`)       
-      return { ...prev, hp, block: remainingBlock }
+      addLog(`▶ 공격 ${dmg} 피해 (${blocked} 차단)`)
+      const nextState = { ...prev, hp, block: remainingBlock }
+      if (nextState.hp <= 0) {
+        setReward({
+          options: ['fusion', 'add', 'rest'],
+          offers: pickOffers(),
+          stage: 'choice',
+        })
+      }
+      return nextState
     })
     if (player.statuses.boost) setPlayer((p) => ({ ...p, statuses: { ...p.statuses, boost: 0 } }))
   }
@@ -172,6 +193,7 @@ export const useGameEngine = () => {
   }
 
   const endTurn = () => {
+    if (reward) return
     setEnergy(BASE_ENERGY)
     setHand([])
     setPlayer((p) => ({ ...p, block: 0 }))
@@ -187,6 +209,7 @@ export const useGameEngine = () => {
   }
 
   const onPlayCard = (cardId, index) => {
+    if (reward) return
     const card = cardLibrary[cardId]
     if (!card) return
     if (energy < card.energy) return
@@ -207,19 +230,26 @@ export const useGameEngine = () => {
   }
 
   const restart = () => {
-    setDeck(shuffle(initialDeck))
+    setReward(null)
+    setDeck(shuffle(collection))
     setDiscard([])
     setHand([])
     setEnergy(BASE_ENERGY)
     setTurn(1)
     setPlayer({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0 } })
-    setEnemy({ ...enemies[enemyIndex], hp: enemies[enemyIndex].maxHp, block: 0, statuses: { vulnerable: 0, jammed: 0 } })
+    setEnemy({
+      ...enemies[enemyIndex],
+      hp: enemies[enemyIndex].maxHp,
+      block: 0,
+      statuses: { vulnerable: 0, jammed: 0 },
+    })
     setIntentStep(0)
     setLog(['시스템을 재부팅했다.'])
     drawCards(5)
   }
 
   const switchEnemy = () => {
+    setReward(null)
     setEnemyIndex((idx) => {
       const next = (idx + 1) % enemies.length
       setEnemy({
@@ -230,7 +260,7 @@ export const useGameEngine = () => {
       })
       setIntentStep(0)
       setLog([`대상 전환: ${enemies[next].name}`])
-      setDeck(shuffle(initialDeck))
+      setDeck(shuffle(collection))
       setDiscard([])
       setHand([])
       drawCards(5)
@@ -238,10 +268,60 @@ export const useGameEngine = () => {
     })
   }
 
+  const handleRewardChoice = (option) => {
+    if (option === 'rest') {
+      heal(16)
+      finalizeReward()
+      return
+    }
+    if (option === 'add') {
+      setReward((r) => ({ ...r, stage: 'add', choice: null }))
+      return
+    }
+    if (option === 'fusion') {
+      setReward((r) => ({ ...r, stage: 'fusion' }))
+      return
+    }
+  }
+
+  const addCardToCollection = (cardId) => {
+    const updated = [...collection, cardId]
+    setCollection(updated)
+    setDeck(shuffle(updated))
+    setDiscard([])
+    setHand([])
+    addLog(`${cardLibrary[cardId].name} 추가`)
+    finalizeReward()
+  }
+
+  const fuseCard = (cardId) => {
+    const upgrade = upgradeMap[cardId]
+    if (!upgrade) {
+      addLog('이 카드는 융합/업그레이드할 수 없습니다')
+      return
+    }
+    const updated = [...collection]
+    const idx = updated.indexOf(cardId)
+    if (idx >= 0) updated[idx] = upgrade
+    setCollection(updated)
+    setDeck(shuffle(updated))
+    setDiscard([])
+    setHand([])
+    addLog(`${cardLibrary[cardId].name} → ${cardLibrary[upgrade].name} 융합 완료`)
+    finalizeReward()
+  }
+
+  const finalizeReward = () => {
+    setReward(null)
+    switchEnemy()
+  }
+
+  const deckList = collection
+
   return {
     cardLibrary,
-    initialDeck,
-    deck,
+    deckList,
+    reward,
     hand,
     energy,
     turn,
@@ -255,5 +335,11 @@ export const useGameEngine = () => {
     endTurn,
     restart,
     switchEnemy,
+    handleRewardChoice,
+    addCardToCollection,
+    fuseCard,
+    setReward,
+    addLog,
+    addStatus,
   }
 }

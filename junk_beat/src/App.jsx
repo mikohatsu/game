@@ -4,13 +4,15 @@ import Hand from './components/Hand'
 import { Timeline, Log } from './components/TimelineLog'
 import DeckPanel from './components/DeckPanel'
 import ControlBar from './components/ControlBar'
+import RewardModal from './components/RewardModal'
 import { useGameEngine } from './hooks/useGameEngine'
 import './App.css'
 
 export default function App() {
   const {
     cardLibrary,
-    initialDeck,
+    deckList,
+    reward,
     hand,
     energy,
     turn,
@@ -24,6 +26,9 @@ export default function App() {
     endTurn,
     restart,
     switchEnemy,
+    handleRewardChoice,
+    addCardToCollection,
+    fuseCard,
   } = useGameEngine()
 
   return (
@@ -49,8 +54,16 @@ export default function App() {
           <Timeline timeline={timeline} />
           <Log log={log} />
         </div>
-        <DeckPanel deckList={initialDeck} cardLibrary={cardLibrary} />
+        <DeckPanel deckList={deckList} cardLibrary={cardLibrary} />
       </div>
+
+      <RewardModal
+        reward={reward}
+        deckList={deckList}
+        onChoice={handleRewardChoice}
+        onSelectCard={addCardToCollection}
+        onFuse={fuseCard}
+      />
     </div>
   )
 }
