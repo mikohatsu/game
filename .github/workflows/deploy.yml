@@ -23,20 +23,30 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install dependencies (text_dungeon_react)
         working-directory: ./text_dungeon_react
         run: npm ci
 
-      - name: Build
+      - name: Build (text_dungeon_react)
         working-directory: ./text_dungeon_react
+        run: npm run build
+
+      - name: Install dependencies (junk_beat)
+        working-directory: ./junk_beat
+        run: npm ci
+
+      - name: Build (junk_beat)
+        working-directory: ./junk_beat
         run: npm run build
 
       - name: Prepare deployment directory
         run: |
           mkdir -p deploy/text_dungeon
+          mkdir -p deploy/junk_beat
           cp -r text_dungeon_react/dist/* deploy/text_dungeon/
+          cp -r junk_beat/dist/* deploy/junk_beat/
           cp index.html deploy/
-          cp -r chess_arena crafters_forge junk_beat neo_junk_market spaceship_engineer text_dungeon deploy/
+          cp -r chess_arena crafters_forge neo_junk_market spaceship_engineer text_dungeon deploy/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
