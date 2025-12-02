@@ -9,6 +9,9 @@ export function Timeline({ timeline }) {
           <div key={idx} className="timeline-chip" title={item.detail || intentGlossary[item.intent]?.desc}>
             {item.active ? '▶ ' : ''}
             {item.label}
+            <div className="timeline-sub">
+              {item.detail || intentGlossary[item.intent]?.desc || '행동 정보 없음'}
+            </div>
           </div>
         ))}
       </div>

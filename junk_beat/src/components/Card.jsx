@@ -23,7 +23,9 @@ export default function Card({ card, disabled, onPlay }) {
   return (
     <div className={`card ${disabled ? 'disabled' : ''} ${rarityClass(card.rarity)}`} onClick={!disabled ? onPlay : undefined}>
       <div className="card-energy">{card.energy}</div>
-      <div className="card-type">{card.type}</div>
+      <div className={`card-type ${card.type === '공격' ? 'type-attack' : card.type === '방어' ? 'type-방어' : 'type-부스트'}`}>
+        {card.type}
+      </div>
       <div className="card-title">{card.name}</div>
       <div className="card-desc">{lines.map((line, idx) => <div key={idx}>{line}</div>)}</div>
       <div className="card-tooltip">

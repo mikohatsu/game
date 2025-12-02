@@ -12,13 +12,33 @@ const StatusPills = ({ statuses }) => (
   </div>
 )
 
-const PatternBar = ({ currentStep, total }) => (
-  <div className="pattern-bar">
-    <div className="pattern-progress" style={{ width: `${((currentStep + 1) / total) * 100}%` }} />
+const PatternList = ({ pattern, currentStep }) => (
+  <div className="pattern-list">
+    {pattern.map((step, idx) => (
+      <div key={idx} className={`pattern-item ${idx === currentStep ? 'active' : ''}`}>
+        <div className="pattern-title">
+          {idx === currentStep && '▶ '} {step.note}
+        </div>
+        <div className="pattern-desc">{step.desc}</div>
+      </div>
+    ))}
+    <div className="pattern-meta">패턴 단계 {currentStep + 1}/{pattern.length}</div>
   </div>
 )
 
 export default function EnemyPanel({ enemy, currentIntent, intentStep, floating }) {
+  const currentSummary = (() => {
+    if (!currentIntent) return ''
+    if (currentIntent.intent === 'single') return `단일 피해 ${currentIntent.damage}`
+    if (currentIntent.intent === 'multi') return `연속 ${currentIntent.hits}회 × ${currentIntent.damage} 피해`
+    if (currentIntent.intent === 'buff') return `실드 ${currentIntent.block}`
+    if (currentIntent.intent === 'charge') return `강력 단일 피해 ${currentIntent.damage}`
+    if (currentIntent.intent === 'fortify') return `실드 대량 ${currentIntent.block}`
+    if (currentIntent.intent === 'zap') return `감전 피해 ${currentIntent.damage}`
+    if (currentIntent.intent === 'heal') return `자가 수복 ${currentIntent.heal}`
+    return currentIntent.note
+  })()
+
   return (
     <div className="panel">
       <p className="section-title">적 위협</p>
@@ -35,11 +55,11 @@ export default function EnemyPanel({ enemy, currentIntent, intentStep, floating 
             <div className="hp-fill" style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }} />
           </div>
           <div className="shield-overlay">
-            <span>HP {enemy.hp}/{enemy.maxHp}</span>
-            <span>| 실드 {enemy.block || 0}</span>
+            <span className="hp-label">HP {enemy.hp}/{enemy.maxHp}</span>
+            <span className="shield-label">실드 {enemy.block || 0}</span>
           </div>
-          <div className="pattern-chip">다음 행동: {currentIntent.intent}</div>
-          <PatternBar currentStep={intentStep} total={enemy.pattern.length} />
+          <div className="pattern-chip">다음 행동: {currentIntent.note} · {currentSummary}</div>
+          <PatternList pattern={enemy.pattern} currentStep={intentStep} />
           <StatusPills statuses={enemy.statuses} />
         </div>
       </div>
