@@ -19,7 +19,7 @@ const rarityClass = (rarity) => {
 
 export default function Card({ card, disabled, onPlay }) {
   const keywords = extractKeywords(card.desc || '')
-  const lines = (card.desc || '').split(',').map((t) => t.trim())
+  const lines = (card.desc || '').split(/\n|,/).map((t) => t.trim())
   return (
     <div className={`card ${disabled ? 'disabled' : ''} ${rarityClass(card.rarity)}`} onClick={!disabled ? onPlay : undefined}>
       <div className="card-energy">{card.energy}</div>

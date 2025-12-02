@@ -79,14 +79,28 @@
   justify-content: center;
 }
 
+.enemy-art {
+  position: relative;
+}
 .enemy-card img {
   width: 120px;
   filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.45));
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .enemy-card.pulse img {
   transform: scale(1.04);
+}
+.enemy-card .hit {
+  filter: drop-shadow(0 0 12px rgba(255, 107, 131, 0.6));
+}
+.overlay-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
 }
 
 .hp-bar {
@@ -102,6 +116,13 @@
   height: 100%;
   background: linear-gradient(90deg, #ff4d6d, #ff9d5c);
   transition: width 0.25s ease;
+}
+.hp-shield {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, rgba(106, 228, 255, 0.4), rgba(83, 242, 157, 0.25));
 }
 
 .shield-overlay {
@@ -313,6 +334,7 @@
   background: rgba(255, 255, 255, 0.04);
   font-size: 13px;
 }
+.timeline-sub { color: var(--text-sub); font-size: 12px; }
 
 .log {
   display: grid;
@@ -422,6 +444,10 @@
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   cursor: pointer;
+}
+.fusion-item.active {
+  border-color: var(--glow-cyan);
+  box-shadow: 0 0 10px rgba(106, 228, 255, 0.16);
 }
 
 .glossary-row {

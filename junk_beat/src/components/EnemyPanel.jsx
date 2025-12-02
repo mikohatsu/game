@@ -12,17 +12,12 @@ const StatusPills = ({ statuses }) => (
   </div>
 )
 
-const PatternList = ({ pattern, currentStep }) => (
+const PatternCurrent = ({ intent }) => (
   <div className="pattern-list">
-    {pattern.map((step, idx) => (
-      <div key={idx} className={`pattern-item ${idx === currentStep ? 'active' : ''}`}>
-        <div className="pattern-title">
-          {idx === currentStep && '▶ '} {step.note}
-        </div>
-        <div className="pattern-desc">{step.desc}</div>
-      </div>
-    ))}
-    <div className="pattern-meta">패턴 단계 {currentStep + 1}/{pattern.length}</div>
+    <div className="pattern-item active">
+      <div className="pattern-title">▶ {intent.note}</div>
+      <div className="pattern-desc">{intent.desc}</div>
+    </div>
   </div>
 )
 
@@ -44,7 +39,18 @@ export default function EnemyPanel({ enemy, currentIntent, intentStep, floating 
       <p className="section-title">적 위협</p>
       <div className="enemy-wrap">
         <div className="enemy-card pulse">
-          <img src={enemy.asset} alt={enemy.name} />
+          <div className="enemy-art">
+            <img src={enemy.asset} alt={enemy.name} className={floating.some((f) => f.side === 'enemy') ? 'hit' : ''} />
+            <div className="overlay-text">
+              {floating
+                .filter((f) => f.side === 'enemy')
+                .map((f) => (
+                  <div key={f.id} className={`float ${f.tone}`}>
+                    {f.tone === 'damage' ? '🩸 ' : f.tone === 'heal' ? '💚 ' : ''}{f.value}
+                  </div>
+                ))}
+            </div>
+          </div>
         </div>
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -53,24 +59,23 @@ export default function EnemyPanel({ enemy, currentIntent, intentStep, floating 
           </div>
           <div className="hp-bar" aria-label="enemy-hp">
             <div className="hp-fill" style={{ width: `${(enemy.hp / enemy.maxHp) * 100}%` }} />
+            {enemy.block ? (
+              <div
+                className="hp-shield"
+                style={{
+                  width: `${Math.min(100, ((enemy.block || 0) / (enemy.maxHp + enemy.block || 1)) * 100)}%`,
+                }}
+              />
+            ) : null}
           </div>
           <div className="shield-overlay">
             <span className="hp-label">HP {enemy.hp}/{enemy.maxHp}</span>
             <span className="shield-label">실드 {enemy.block || 0}</span>
           </div>
           <div className="pattern-chip">다음 행동: {currentIntent.note} · {currentSummary}</div>
-          <PatternList pattern={enemy.pattern} currentStep={intentStep} />
+          <PatternCurrent intent={currentIntent} />
           <StatusPills statuses={enemy.statuses} />
         </div>
-      </div>
-      <div className="float-container">
-        {floating
-          .filter((f) => f.side === 'enemy')
-          .map((f) => (
-            <FloatingText key={f.id} tone={f.tone}>
-              {f.value}
-            </FloatingText>
-          ))}
       </div>
     </div>
   )

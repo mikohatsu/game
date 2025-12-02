@@ -1,48 +1,58 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { cardLibrary, initialDeck, rewardPool } from '../data/cards'
-import { enemies } from '../data/enemies'
+import { artifacts as artifactList } from '../data/artifacts'
+import { cardLibrary, fusionCards, fusionRecipes, initialDeck, rewardPool } from '../data/cards'
+import { bossEnemy, enemies, specialEnemies } from '../data/enemies'
 import { shuffle } from '../utils/shuffle'
 
 const BASE_ENERGY = 3
-const pickOffers = () => shuffle(rewardPool).slice(0, 3)
-const upgradeMap = {
-  rustSlice: 'rustSlicePlus',
-  makeshiftGuard: 'makeshiftGuardPlus',
-  pulseWeak: 'pulseWeakPlus',
-}
+const fusionKeys = Object.keys(fusionRecipes)
+const fusionPoolIds = Object.values(fusionRecipes)
+
+const createFusionKey = (a, b) => [a, b].sort().join('+')
 
 export const useGameEngine = () => {
+  const [customCards, setCustomCards] = useState({})
   const [collection, setCollection] = useState(initialDeck)
   const [deck, setDeck] = useState(() => shuffle(initialDeck))
   const [discard, setDiscard] = useState([])
   const [hand, setHand] = useState([])
   const [energy, setEnergy] = useState(BASE_ENERGY)
   const [turn, setTurn] = useState(1)
-  const [player, setPlayer] = useState({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0 } })
+  const [player, setPlayer] = useState({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0, drawNext: 0 } })
   const [enemyIndex, setEnemyIndex] = useState(0)
   const [enemy, setEnemy] = useState(() => ({
     ...enemies[0],
     hp: enemies[0].maxHp,
     block: 0,
     statuses: { vulnerable: 0, jammed: 0 },
+    kind: 'normal',
   }))
   const [intentStep, setIntentStep] = useState(0)
   const [log, setLog] = useState(['폐허 된 공장에서 기계들의 비트가 울린다.'])
   const [floating, setFloating] = useState([])
   const [reward, setReward] = useState(null)
+  const [fusionSources, setFusionSources] = useState({})
+  const [artifacts, setArtifacts] = useState([])
+  const [encounter, setEncounter] = useState(1)
   const floatId = useRef(0)
 
-  useEffect(() => {
-    drawCards(5)
-  }, [])
+  const mergedCards = useMemo(() => ({ ...cardLibrary, ...fusionCards, ...customCards }), [customCards])
+
+  const energyCap = useMemo(() => {
+    const bonus = artifacts.reduce((acc, id) => {
+      const art = artifactList.find((a) => a.id === id)
+      return acc + (art?.effect?.energyMax || 0)
+    }, 0)
+    return BASE_ENERGY + bonus
+  }, [artifacts])
 
   const currentIntent = useMemo(() => enemy.pattern[intentStep % enemy.pattern.length], [enemy.pattern, intentStep])
-  const timeline = useMemo(
-    () => enemy.pattern.map((step, idx) => ({ label: step.note, active: idx === intentStep, detail: step.desc, intent: step.intent })),
-    [enemy.pattern, intentStep],
-  )
+  const timeline = useMemo(() => {
+    const step = enemy.pattern[intentStep % enemy.pattern.length]
+    return step ? [{ label: step.note, active: true, detail: step.desc, intent: step.intent }] : []
+  }, [enemy.pattern, intentStep])
 
-  const addLog = (text) => setLog((prev) => [text, ...prev].slice(0, 18))
+  const addLog = (text) => setLog((prev) => [text, ...prev].slice(0, 22))
 
   const addFloating = (value, tone = 'damage', side = 'enemy') => {
     floatId.current += 1
@@ -77,11 +87,28 @@ export const useGameEngine = () => {
     })
   }
 
+  useEffect(() => {
+    drawCards(5)
+  }, [])
+
+  const lifestealRatio = useMemo(() => {
+    const art = artifacts.find((id) => artifactList.find((a) => a.id === id && a.effect.lifesteal))
+    if (!art) return 0
+    const found = artifactList.find((a) => a.id === art)
+    return found.effect.lifesteal || 0
+  }, [artifacts])
+
+  const attackBonus = useMemo(
+    () => artifacts.reduce((acc, id) => acc + (artifactList.find((a) => a.id === id)?.effect?.attackBonus || 0), 0),
+    [artifacts],
+  )
+
   const applyDamage = (base) => {
+    const bonus = attackBonus
     setEnemy((prev) => {
       const vuln = prev.statuses.vulnerable || 0
       const boost = player.statuses.boost || 0
-      let dmg = base + (boost ? Math.floor(base * 0.5) : 0)
+      let dmg = base + bonus + (boost ? Math.floor(base * 0.5) : 0)
       if (vuln) dmg = Math.floor(dmg * 1.5)
       const blocked = Math.min(prev.block || 0, dmg)
       const remainingBlock = Math.max(0, (prev.block || 0) - dmg)
@@ -89,14 +116,12 @@ export const useGameEngine = () => {
       const hp = Math.max(0, prev.hp - finalDmg)
       addFloating(-dmg, 'damage', 'enemy')
       addLog(`▶ 공격 ${dmg} 피해 (${blocked} 차단)`)
-      const nextState = { ...prev, hp, block: remainingBlock }
-      if (nextState.hp <= 0) {
-        setReward({
-          options: ['fusion', 'add', 'rest'],
-          offers: pickOffers(),
-          stage: 'choice',
-        })
+      if (lifestealRatio && finalDmg > 0) {
+        const healAmount = Math.max(1, Math.floor(finalDmg * lifestealRatio))
+        heal(healAmount)
       }
+      const nextState = { ...prev, hp, block: remainingBlock }
+      if (nextState.hp <= 0) handleVictory()
       return nextState
     })
     if (player.statuses.boost) setPlayer((p) => ({ ...p, statuses: { ...p.statuses, boost: 0 } }))
@@ -151,17 +176,17 @@ export const useGameEngine = () => {
       let next = { ...prev }
       const jammed = prev.statuses.jammed || 0
       const damageMod = jammed ? Math.max(0, 1 - jammed * 0.2) : 1
-
+      const scale = 1 + 0.04 * encounter
       const dealToPlayer = (raw) => {
-        const dmg = Math.max(0, Math.round(raw * damageMod))
+        const dmg = Math.max(0, Math.round(raw * damageMod * scale))
         setPlayer((p) => {
           const remainingBlock = Math.max(0, p.block - dmg)
           const leftover = Math.max(0, dmg - p.block)
           const hp = Math.max(0, p.hp - leftover)
           return { ...p, hp, block: remainingBlock }
         })
-        addFloating(-Math.round(raw * damageMod), 'damage', 'player')
-        addLog(`◀ 적 피해 ${Math.round(raw * damageMod)}`)
+        addFloating(-Math.round(raw * damageMod * scale), 'damage', 'player')
+        addLog(`◀ 적 피해 ${Math.round(raw * damageMod * scale)}`)
       }
 
       if (intent.intent === 'single') dealToPlayer(intent.damage)
@@ -169,34 +194,35 @@ export const useGameEngine = () => {
         for (let i = 0; i < intent.hits; i++) dealToPlayer(intent.damage)
       }
       if (intent.intent === 'buff') {
-        next.block = (next.block || 0) + (intent.block || 0)
+        next.block = (next.block || 0) + Math.round((intent.block || 0) * scale)
         addLog('적이 방어막을 전개했다')
       }
       if (intent.intent === 'charge') dealToPlayer(intent.damage)
       if (intent.intent === 'fortify') {
-        next.block = (next.block || 0) + (intent.block || 0)
+        next.block = (next.block || 0) + Math.round((intent.block || 0) * scale)
         addLog('적이 장갑을 두껍게 했다')
       }
       if (intent.intent === 'zap') dealToPlayer(intent.damage)
       if (intent.intent === 'heal') {
-        next.hp = Math.min(next.maxHp, next.hp + (intent.heal || 0))
-        addFloating(`+${intent.heal} HP`, 'heal', 'enemy')
+        next.hp = Math.min(next.maxHp, next.hp + Math.round((intent.heal || 0) * scale))
+        addFloating(`+${Math.round((intent.heal || 0) * scale)} HP`, 'heal', 'enemy')
       }
 
       if (jammed) next.statuses.jammed = Math.max(0, jammed - 1)
       if (next.statuses.vulnerable) next.statuses.vulnerable = Math.max(0, next.statuses.vulnerable - 1)
       if (next.block) next.block = Math.max(0, next.block - 4)
 
-      setIntentStep((i) => (i + 1) % prev.pattern.length)
+      setIntentStep(() => Math.floor(Math.random() * prev.pattern.length))
       return next
     })
   }
 
   const endTurn = () => {
     if (reward) return
-    setEnergy(BASE_ENERGY)
+    const drawNext = player.statuses.drawNext || 0
+    setEnergy(energyCap)
     setHand([])
-    setPlayer((p) => ({ ...p, block: 0 }))
+    setPlayer((p) => ({ ...p, block: 0, statuses: { ...p.statuses, drawNext: 0 } }))
     if (player.statuses.heat > 0) {
       const heatDmg = player.statuses.heat * 2
       setPlayer((p) => ({ ...p, hp: Math.max(0, p.hp - heatDmg) }))
@@ -205,19 +231,19 @@ export const useGameEngine = () => {
     }
     resolveEnemy()
     setTurn((t) => t + 1)
-    drawCards(5)
+    drawCards(5 + drawNext)
   }
 
   const onPlayCard = (cardId, index) => {
     if (reward) return
-    const card = cardLibrary[cardId]
+    const card = mergedCards[cardId]
     if (!card) return
     if (energy < card.energy) return
     setEnergy((e) => e - card.energy)
     setHand((prev) => prev.filter((_, idx) => idx !== index))
     setDiscard((prev) => [...prev, cardId])
 
-    card.play({
+    card.play?.({
       applyDamage,
       addBlock,
       heal,
@@ -226,6 +252,26 @@ export const useGameEngine = () => {
       addStatus,
       clearStatus,
       statuses: enemy.statuses,
+      drawCard: (n) => drawCards(n),
+    })
+  }
+
+  const handleVictory = () => {
+    const isBoss = enemy.kind === 'boss'
+    const isSpecial = enemy.kind === 'special'
+    const relicRoll = isBoss ? 1 : isSpecial ? Math.random() < 0.3 : false
+    const availableArtifacts = artifactList.filter((a) => !artifacts.includes(a.id))
+    const relicOptions = relicRoll ? shuffle(availableArtifacts).slice(0, isBoss ? 3 : 1) : []
+    const cardOffers = shuffle(rewardPool).slice(0, 3)
+    const fusionReady = turn % 4 === 0
+    const upgradeReady = turn % 3 === 0
+
+    setReward({
+      stage: 'choice',
+      cardOffers,
+      fusionReady,
+      upgradeReady,
+      relicOptions,
     })
   }
 
@@ -234,54 +280,73 @@ export const useGameEngine = () => {
     setDeck(shuffle(collection))
     setDiscard([])
     setHand([])
-    setEnergy(BASE_ENERGY)
+    setEnergy(energyCap)
     setTurn(1)
-    setPlayer({ hp: 70, maxHp: 70, block: 0, statuses: { boost: 0, heat: 0 } })
-    setEnemy({
-      ...enemies[enemyIndex],
-      hp: enemies[enemyIndex].maxHp,
-      block: 0,
-      statuses: { vulnerable: 0, jammed: 0 },
-    })
+    const baseHp = 70 + artifacts.reduce((acc, id) => acc + (artifactList.find((a) => a.id === id)?.effect?.maxHpBonus || 0), 0)
+    const baseBlock = artifacts.reduce((acc, id) => acc + (artifactList.find((a) => a.id === id)?.effect?.startBlock || 0), 0)
+    setPlayer({ hp: baseHp, maxHp: baseHp, block: baseBlock, statuses: { boost: 0, heat: 0, drawNext: 0 } })
+    pickEnemy(encounter)
     setIntentStep(0)
     setLog(['시스템을 재부팅했다.'])
     drawCards(5)
   }
 
-  const switchEnemy = () => {
-    setReward(null)
-    setEnemyIndex((idx) => {
-      const next = (idx + 1) % enemies.length
-      setEnemy({
-        ...enemies[next],
-        hp: enemies[next].maxHp,
-        block: 0,
-        statuses: { vulnerable: 0, jammed: 0 },
-      })
-      setIntentStep(0)
-      setLog([`대상 전환: ${enemies[next].name}`])
-      setDeck(shuffle(collection))
-      setDiscard([])
-      setHand([])
-      drawCards(5)
-      return next
+  const pickEnemy = (enc) => {
+    let pool = enemies
+    let kind = 'normal'
+    if (enc % 10 === 0) {
+      pool = [bossEnemy]
+      kind = 'boss'
+    } else if (enc % 5 === 0) {
+      pool = specialEnemies
+      kind = 'special'
+    }
+    const selected = pool[Math.floor(Math.random() * pool.length)]
+    const scale = 1 + 0.08 * (enc - 1)
+    const multiplier = kind === 'boss' ? 1.3 : kind === 'special' ? 1.15 : 1
+    const maxHp = Math.round(selected.maxHp * scale * multiplier)
+    setEnemy({
+      ...selected,
+      hp: maxHp,
+      maxHp,
+      block: 0,
+      kind,
+      statuses: { vulnerable: 0, jammed: 0 },
+      pattern: selected.pattern.map((p) => ({
+        ...p,
+        damage: p.damage ? Math.round(p.damage * (1 + 0.04 * (enc - 1)) * multiplier) : p.damage,
+        block: p.block ? Math.round(p.block * (1 + 0.04 * (enc - 1)) * multiplier) : p.block,
+        heal: p.heal ? Math.round(p.heal * (1 + 0.04 * (enc - 1)) * multiplier) : p.heal,
+      })),
     })
   }
 
+  const nextEnemy = () => {
+    setEncounter((c) => {
+      const next = c + 1
+      pickEnemy(next)
+      return next
+    })
+    setReward(null)
+    setDeck(shuffle(collection))
+    setDiscard([])
+    setHand([])
+    setEnergy(energyCap)
+    setTurn(1)
+    const baseHp = 70 + artifacts.reduce((acc, id) => acc + (artifactList.find((a) => a.id === id)?.effect?.maxHpBonus || 0), 0)
+    const baseBlock = artifacts.reduce((acc, id) => acc + (artifactList.find((a) => a.id === id)?.effect?.startBlock || 0), 0)
+    setPlayer({ hp: baseHp, maxHp: baseHp, block: baseBlock, statuses: { boost: 0, heat: 0, drawNext: 0 } })
+    setIntentStep(0)
+    setLog(['새 적을 찾았다.'])
+    drawCards(5)
+  }
+
   const handleRewardChoice = (option) => {
-    if (option === 'rest') {
-      heal(16)
-      finalizeReward()
-      return
-    }
-    if (option === 'add') {
-      setReward((r) => ({ ...r, stage: 'add', choice: null }))
-      return
-    }
-    if (option === 'fusion') {
-      setReward((r) => ({ ...r, stage: 'fusion' }))
-      return
-    }
+    if (!reward) return
+    if (option === 'card') setReward((r) => ({ ...r, stage: 'add' }))
+    if (option === 'fusion') setReward((r) => ({ ...r, stage: 'fusion' }))
+    if (option === 'upgrade') setReward((r) => ({ ...r, stage: 'upgrade' }))
+    if (option === 'relic') setReward((r) => ({ ...r, stage: 'relic' }))
   }
 
   const addCardToCollection = (cardId) => {
@@ -290,14 +355,14 @@ export const useGameEngine = () => {
     setDeck(shuffle(updated))
     setDiscard([])
     setHand([])
-    addLog(`${cardLibrary[cardId].name} 추가`)
+    addLog(`${mergedCards[cardId].name} 추가`)
     finalizeReward()
   }
 
-  const fuseCard = (cardId) => {
-    const upgrade = upgradeMap[cardId]
+  const fuseCardLegacy = (cardId) => {
+    const upgrade = fusionRecipes[cardId]
     if (!upgrade) {
-      addLog('이 카드는 융합/업그레이드할 수 없습니다')
+      addLog('융합/업그레이드 불가 카드입니다')
       return
     }
     const updated = [...collection]
@@ -307,23 +372,152 @@ export const useGameEngine = () => {
     setDeck(shuffle(updated))
     setDiscard([])
     setHand([])
-    addLog(`${cardLibrary[cardId].name} → ${cardLibrary[upgrade].name} 융합 완료`)
+    addLog(`${mergedCards[cardId].name} → ${mergedCards[upgrade].name} 융합 완료`)
+    finalizeReward()
+  }
+
+  const fuseTwoCards = (mainId, subId) => {
+    const main = mergedCards[mainId]
+    const sub = mergedCards[subId]
+    if (!main || !sub) {
+      addLog('카드를 선택하세요')
+      return
+    }
+    const key = createFusionKey(mainId, subId)
+    const recipeResult = fusionRecipes[key]
+    if (recipeResult && fusionCards[recipeResult]) {
+      // 전용 융합 카드
+      setCollection((prev) => {
+        const copy = [...prev]
+        let removed = 0
+        for (let i = 0; i < copy.length && removed < 2; i++) {
+          if (copy[i] === mainId || copy[i] === subId) {
+            copy.splice(i, 1)
+            i--
+            removed++
+          }
+        }
+        copy.push(recipeResult)
+        return copy
+      })
+      setFusionSources((prev) => ({ ...prev, [recipeResult]: [mainId, subId] }))
+      setDeck((prev) => shuffle(prev))
+      setDiscard([])
+      setHand([])
+      addLog(`전용 융합: ${fusionCards[recipeResult].name}`)
+      finalizeReward()
+      return
+    }
+    const newId = `fusion-${Date.now()}-${Math.floor(Math.random() * 999)}`
+    const energyCost = Math.max(1, (main.energy || 0) + (sub.energy || 0) - 1)
+    const newCard = {
+      name: `${main.name}+`,
+      type: '융합',
+      rarity: 'rare',
+      energy: energyCost,
+      desc: `${main.desc}\n${sub.desc}`,
+      play: (ctx) => {
+        main.play?.(ctx)
+        sub.play?.(ctx)
+      },
+    }
+    setCustomCards((prev) => ({ ...prev, [newId]: newCard }))
+    setFusionSources((prev) => ({ ...prev, [newId]: [mainId, subId] }))
+    setCollection((prev) => {
+      const copy = [...prev]
+      let removed = 0
+      for (let i = 0; i < copy.length && removed < 2; i++) {
+        if (copy[i] === mainId || copy[i] === subId) {
+          copy.splice(i, 1)
+          i--
+          removed++
+        }
+      }
+      copy.push(newId)
+      return copy
+    })
+    setDeck((prev) => shuffle(prev))
+    setDiscard([])
+    setHand([])
+    addLog(`융합 완료: ${newCard.name}`)
+    finalizeReward()
+  }
+
+  const upgradeCard = (cardId) => {
+    const upgradeMap = {
+      rustSlice: 'rustSlicePlus',
+      makeshiftGuard: 'makeshiftGuardPlus',
+      pulseWeak: 'pulseWeakPlus',
+    }
+    const upgraded = upgradeMap[cardId]
+    if (upgraded) {
+      setCollection((prev) => {
+        const copy = [...prev]
+        const idx = copy.indexOf(cardId)
+        if (idx >= 0) copy[idx] = upgraded
+        return copy
+      })
+      addLog(`${mergedCards[cardId].name} 강화 완료`)
+    } else {
+      // 수치 강화 카드 생성
+      const base = mergedCards[cardId]
+      const newId = `${cardId}-up-${Date.now()}`
+      const desc = `${base.desc}\n(강화)`
+      const addBonus = artifactList.reduce((acc, art) => {
+        if (!artifacts.includes(art.id)) return acc
+        return acc + (art.effect.upgradeBonus || 0)
+      }, 2)
+      const play = base.play
+      const wrapped = {
+        ...base,
+        energy: Math.max(0, base.energy - (artifactList.find((a) => artifacts.includes(a.id) && a.effect.upgradeEnergyDiscount)?.effect.upgradeEnergyDiscount || 0)),
+        desc,
+        play: (ctx) => {
+          const originalDamage = ctx.applyDamage
+          const boostedCtx = {
+            ...ctx,
+            applyDamage: (val) => originalDamage(val + addBonus),
+            addBlock: (val, target) => ctx.addBlock(val + addBonus, target),
+          }
+          play?.(boostedCtx)
+        },
+      }
+      setCustomCards((prev) => ({ ...prev, [newId]: wrapped }))
+      setCollection((prev) => {
+        const copy = [...prev]
+        const idx = copy.indexOf(cardId)
+        if (idx >= 0) copy[idx] = newId
+        return copy
+      })
+      addLog(`${base.name} 강화(수치) 완료`)
+    }
+    setDeck((prev) => shuffle(prev))
+    setDiscard([])
+    setHand([])
+    finalizeReward()
+  }
+
+  const gainArtifact = (artifactId) => {
+    setArtifacts((prev) => [...prev, artifactId])
+    addLog(`유물 획득: ${artifactList.find((a) => a.id === artifactId)?.name}`)
     finalizeReward()
   }
 
   const finalizeReward = () => {
     setReward(null)
-    switchEnemy()
+    nextEnemy()
   }
 
   const deckList = collection
 
   return {
-    cardLibrary,
+    cards: mergedCards,
     deckList,
+    fusionSources,
     reward,
     hand,
     energy,
+    energyCap,
     turn,
     player,
     enemy,
@@ -334,12 +528,11 @@ export const useGameEngine = () => {
     onPlayCard,
     endTurn,
     restart,
-    switchEnemy,
+    nextEnemy,
     handleRewardChoice,
     addCardToCollection,
-    fuseCard,
-    setReward,
-    addLog,
-    addStatus,
+    fuseTwoCards,
+    upgradeCard,
+    gainArtifact,
   }
 }

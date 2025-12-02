@@ -18,6 +18,14 @@ export default function PlayerPanel({ player, energy, floating }) {
       <p className="section-title">오퍼레이터</p>
       <div className="hp-bar" aria-label="player-hp">
         <div className="hp-fill" style={{ width: `${(player.hp / player.maxHp) * 100}%`, background: 'linear-gradient(90deg, #6ae4ff, #53f29d)' }} />
+        {player.block ? (
+          <div
+            className="hp-shield"
+            style={{
+              width: `${Math.min(100, ((player.block || 0) / (player.maxHp + player.block || 1)) * 100)}%`,
+            }}
+          />
+        ) : null}
       </div>
       <div className="shield-overlay">
         <span className="hp-label">HP {player.hp}/{player.maxHp}</span>
@@ -35,7 +43,7 @@ export default function PlayerPanel({ player, energy, floating }) {
           .filter((f) => f.side === 'player')
           .map((f) => (
             <FloatingText key={f.id} tone={f.tone}>
-              {f.value}
+              {f.tone === 'damage' ? '🩸 ' : f.tone === 'heal' ? '💚 ' : ''}{f.value}
             </FloatingText>
           ))}
       </div>

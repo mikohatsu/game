@@ -3,15 +3,15 @@ import PlayerPanel from './components/PlayerPanel'
 import Hand from './components/Hand'
 import { Timeline, Log } from './components/TimelineLog'
 import DeckPanel from './components/DeckPanel'
-import ControlBar from './components/ControlBar'
 import RewardModal from './components/RewardModal'
 import { useGameEngine } from './hooks/useGameEngine'
 import './App.css'
 
 export default function App() {
   const {
-    cardLibrary,
+    cards,
     deckList,
+    fusionSources,
     reward,
     hand,
     energy,
@@ -25,10 +25,12 @@ export default function App() {
     onPlayCard,
     endTurn,
     restart,
-    switchEnemy,
+    nextEnemy,
     handleRewardChoice,
     addCardToCollection,
-    fuseCard,
+    fuseTwoCards,
+    upgradeCard,
+    gainArtifact,
   } = useGameEngine()
 
   return (
@@ -46,15 +48,18 @@ export default function App() {
         <PlayerPanel player={player} energy={energy} floating={floating} />
       </div>
 
-      <Hand hand={hand} cardLibrary={cardLibrary} energy={energy} onPlayCard={onPlayCard} />
-      <ControlBar onEndTurn={endTurn} onRestart={restart} onSwitchEnemy={switchEnemy} />
+      <Hand hand={hand} cardLibrary={cards} energy={energy} onPlayCard={onPlayCard} />
+      <div className="controls">
+        <button className="btn" onClick={endTurn}>턴 종료 / 적 행동</button>
+        <button className="btn secondary" onClick={restart}>전투 재시작</button>
+      </div>
 
       <div className="grid" style={{ marginTop: 16 }}>
         <div className="panel">
           <Timeline timeline={timeline} />
           <Log log={log} />
         </div>
-        <DeckPanel deckList={deckList} cardLibrary={cardLibrary} />
+        <DeckPanel deckList={deckList} cardLibrary={cards} fusionSources={fusionSources} />
       </div>
 
       <RewardModal
@@ -62,7 +67,10 @@ export default function App() {
         deckList={deckList}
         onChoice={handleRewardChoice}
         onSelectCard={addCardToCollection}
-        onFuse={fuseCard}
+        onFuseTwo={fuseTwoCards}
+        onUpgrade={upgradeCard}
+        onRelic={gainArtifact}
+        cards={cards}
       />
     </div>
   )
