@@ -6,6 +6,7 @@ import { Timeline, Log } from './components/TimelineLog'
 import DeckPanel from './components/DeckPanel'
 import RewardModal from './components/RewardModal'
 import FusionCodex from './components/FusionCodex'
+import Card from './components/Card'
 import { fusionRecipes } from './data/cards'
 import { useGameEngine } from './hooks/useGameEngine'
 import './App.css'
@@ -17,6 +18,8 @@ export default function App() {
     deckList,
     fusionSources,
     fusionCodex,
+    newFusionUnlock,
+    clearFusionUnlock,
     reward,
     hand,
     energy,
@@ -81,6 +84,20 @@ export default function App() {
         cards={cards}
       />
       <FusionCodex open={codexOpen} onClose={() => setCodexOpen(false)} recipes={fusionRecipes} discovered={fusionCodex} cards={cards} />
+      {newFusionUnlock ? (
+        <div className="modal-backdrop">
+          <div className="modal">
+            <h3>새 조합법 획득!</h3>
+            <p className="section-title">조합이 도감에 기록되었습니다.</p>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <div style={{ width: 220 }}>
+                <Card cardId={newFusionUnlock.result} card={cards[newFusionUnlock.result]} disabled />
+              </div>
+            </div>
+            <button className="btn" onClick={clearFusionUnlock}>확인</button>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

@@ -33,6 +33,7 @@ export const useGameEngine = () => {
   const [artifacts, setArtifacts] = useState([])
   const [encounter, setEncounter] = useState(1)
   const [fusionCodex, setFusionCodex] = useState([])
+  const [newFusionUnlock, setNewFusionUnlock] = useState(null)
   const floatId = useRef(0)
 
   const mergedCards = useMemo(() => ({ ...cardLibrary, ...fusionCards, ...customCards }), [customCards])
@@ -89,6 +90,22 @@ export const useGameEngine = () => {
   useEffect(() => {
     drawCards(5)
   }, [])
+
+  useEffect(() => {
+    const saved = localStorage.getItem('jb-fusion-codex')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (Array.isArray(parsed)) setFusionCodex(parsed)
+      } catch (e) {
+        // ignore parse error
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    localStorage.setItem('jb-fusion-codex', JSON.stringify(fusionCodex))
+  }, [fusionCodex])
 
   const lifestealRatio = useMemo(() => {
     const art = artifacts.find((id) => artifactList.find((a) => a.id === id && a.effect.lifesteal))
@@ -408,7 +425,11 @@ export const useGameEngine = () => {
       setDiscard([])
       setHand([])
       addLog(`전용 융합: ${fusionCards[recipeResult].name}`)
-      setFusionCodex((prev) => (prev.includes(key) ? prev : [...prev, key]))
+      setFusionCodex((prev) => {
+        const updated = prev.includes(key) ? prev : [...prev, key]
+        if (!prev.includes(key)) setNewFusionUnlock({ key, result: recipeResult })
+        return updated
+      })
       finalizeReward(updatedCollection)
       return
     }
@@ -549,5 +570,7 @@ export const useGameEngine = () => {
     fuseTwoCards,
     upgradeCard,
     gainArtifact,
+    newFusionUnlock,
+    clearFusionUnlock: () => setNewFusionUnlock(null),
   }
 }

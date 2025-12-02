@@ -23,9 +23,9 @@ export default function FusionCodex({ open, onClose, recipes, discovered, cards 
           {entries.map((entry) => (
             <div key={entry.key} className={`codex-cell ${entry.unlocked ? '' : 'locked'}`}>
               <div className="codex-pair">
-                <span>{cards[entry.a]?.name || entry.a}</span>
+                <span>{entry.unlocked ? (cards[entry.a]?.name || entry.a) : '???'}</span>
                 <span className="codex-plus">+</span>
-                <span>{cards[entry.b]?.name || entry.b}</span>
+                <span>{entry.unlocked ? (cards[entry.b]?.name || entry.b) : '???'}</span>
               </div>
               <div className="codex-result">
                 {entry.unlocked ? (cards[entry.result]?.name || entry.result) : '???'}
