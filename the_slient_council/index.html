@@ -2,869 +2,839 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>침묵의 의회 (The Silent Council) - 완전판</title>
+    <title>침묵의 의회 (The Silent Council) - 최종 복원 및 안정화</title>
     <style>
-        /* CSS는 이전과 동일하며, 가독성을 위해 생략합니다. */
         :root {
-            --p1-color: #0088ff; /* 집정관 (Blue) */
-            --p2-color: #ff3333; /* 선동가 (Red) */
-            --neutral-color: #ffd700; /* 중립 (Gold) */
-            --bg-color: #1a1a1a;
-            --text-color: #eee;
-            --board-bg: #222;
+            --p1-color: #4facfe; /* 집정관 */
+            --p2-color: #ff0844; /* 선동가 */
+            --neutral-color: #ffd700; /* 중립 */
+            --bg-color: #121212;
+            --panel-bg: #1e1e1e;
+            --text-color: #e0e0e0;
+            --border-color: #333;
         }
 
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        h1, h2 { color: #fff; text-align: center; }
-        #game-info { display: flex; justify-content: space-around; width: 800px; margin-bottom: 20px; }
-        .info-box { padding: 10px; border: 1px solid #444; border-radius: 5px; background: #333; text-align: center; }
-        #stability-bar, #crisis-bar { height: 20px; margin-top: 5px; border-radius: 3px; overflow: hidden; }
-        #stability-bar span { display: block; height: 100%; text-align: center; line-height: 20px; color: #000; font-weight: bold; }
-        #stability-marker { transition: margin-left 0.3s ease; }
-        #crisis-bar-fill { background: var(--p2-color); width: 0%; height: 100%; transition: width 0.3s; }
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
 
-        #map-container { display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 10px; width: 600px; height: 400px; margin-bottom: 20px; }
-        .zone { background: var(--board-bg); border: 2px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; position: relative; }
-        .zone-title { font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; }
-        .zone-info { font-size: 0.7rem; color: #aaa; text-align: center; }
-        .cube-count { font-size: 1.2rem; margin-top: 5px; }
-        .p1-cubes { color: var(--p1-color); }
-        .p2-cubes { color: var(--p2-color); }
-        .active-effect { position: absolute; top: 2px; left: 2px; font-size: 0.8rem; color: var(--neutral-color); }
-        .zone.dominated-1 { border-color: var(--p1-color); }
-        .zone.dominated--1 { border-color: var(--p2-color); }
-
-
-        #hand-container { display: flex; gap: 10px; margin-bottom: 20px; }
-        .card { width: 120px; height: 180px; background: #444; border: 2px solid #777; border-radius: 8px; padding: 5px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: all 0.2s; }
-        .card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .card-header { display: flex; justify-content: space-between; font-weight: bold; font-size: 1.1rem; }
-        .card-op { background: var(--neutral-color); color: #000; padding: 2px 5px; border-radius: 3px; }
-        .card-type { font-size: 0.7rem; }
-        .card-event { font-size: 0.8rem; text-align: center; margin: auto 0; }
-        .p1-card { border-color: var(--p1-color); background: #2a3d4a; }
-        .p2-card { border-color: var(--p2-color); background: #4a2a2a; }
-        .neutral-card { border-color: var(--neutral-color); background: #4a4a2a; }
-
-        #op-actions { display: flex; gap: 10px; margin-top: 10px; }
-        .action-button { padding: 10px 15px; background: #555; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .action-button:hover:not(:disabled) { background: #777; }
-        .action-button:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* --- Header & Tutorial --- */
+        header { width: 100%; padding: 10px 20px; display: flex; justify-content: center; align-items: center; background: var(--panel-bg); border-bottom: 1px solid var(--border-color); position: relative; }
+        h1 { margin: 0; font-size: 1.5rem; letter-spacing: 2px; }
         
-        #current-status { margin-top: 15px; font-size: 1.1rem; }
-        #log { margin-top: 20px; width: 800px; max-height: 200px; overflow-y: scroll; background: #222; padding: 10px; border-radius: 5px; font-size: 0.9rem; color: #aaa; }
+        #tutorial-btn {
+            position: absolute;
+            left: 20px;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--neutral-color);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+
+        /* --- Game Area --- */
+        #game-container { display: flex; width: 100%; height: 100%; padding: 20px; box-sizing: border-box; gap: 20px; }
+        
+        /* Left: Map */
+        #left-panel { flex: 2; display: flex; flex-direction: column; gap: 10px; }
+        #map-area { 
+            flex-grow: 1; 
+            background: #222; 
+            border-radius: 10px; 
+            position: relative; 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            grid-template-rows: repeat(3, 1fr); 
+            gap: 15px; 
+            padding: 20px;
+        }
+
+        .zone { 
+            background: #2a2a2a; 
+            border: 2px solid #444; 
+            border-radius: 8px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            cursor: pointer; 
+            position: relative;
+            transition: all 0.2s;
+        }
+        .zone:hover { background: #333; }
+        .zone.selected-source { border-color: #fff; box-shadow: 0 0 15px #fff; animation: pulse 1s infinite; }
+        .zone.valid-target { border-color: #0f0; background: #1a331a; }
+        .zone.dominated-p1 { border-color: var(--p1-color); box-shadow: 0 0 10px var(--p1-color) inset; }
+        .zone.dominated-p2 { border-color: var(--p2-color); box-shadow: 0 0 10px var(--p2-color) inset; }
+
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.02); } 100% { transform: scale(1); } }
+
+        .cube-display { font-size: 1.5rem; font-weight: bold; margin: 5px 0; }
+        .p1-count { color: var(--p1-color); margin-right: 10px; }
+        .p2-count { color: var(--p2-color); }
+        .zone-name { font-size: 0.9rem; font-weight: bold; }
+        .zone-effect { font-size: 0.7rem; color: var(--neutral-color); text-align: center; border-top: 1px solid #444; padding-top: 5px; margin-top: 5px; width: 80%; }
+
+        /* Right: Controls & Status */
+        #right-panel { flex: 1; display: flex; flex-direction: column; gap: 15px; min-width: 320px; }
+        
+        .status-card { background: var(--panel-bg); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); }
+        
+        #stability-track { margin-top: 10px; height: 20px; background: linear-gradient(90deg, var(--p2-color) 0%, #333 50%, var(--p1-color) 100%); position: relative; border-radius: 4px; }
+        #stability-marker { position: absolute; top: -5px; width: 4px; height: 30px; background: #fff; border: 1px solid #000; transition: left 0.3s; }
+        
+        #crisis-track { margin-top: 10px; height: 10px; background: #333; border-radius: 4px; overflow: hidden; }
+        #crisis-fill { height: 100%; background: #ff4444; width: 0%; transition: width 0.3s; }
+
+        #hand-area { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; min-height: 150px; }
+        .card { 
+            width: 90px; height: 130px; 
+            background: #333; 
+            border: 2px solid #555; 
+            border-radius: 6px; 
+            padding: 5px; 
+            font-size: 0.7rem; 
+            cursor: pointer; 
+            display: flex; flex-direction: column; justify-content: space-between;
+            transition: transform 0.2s;
+        }
+        .card:hover { transform: scale(1.05); z-index: 10; border-color: #fff; }
+        .card.p1 { border-color: var(--p1-color); background: #101820; }
+        .card.p2 { border-color: var(--p2-color); background: #201010; }
+        .card.neutral { border-color: var(--neutral-color); background: #201e10; }
+        .card-title { font-weight: bold; text-align: center; font-size: 0.8rem;}
+        .card-op { text-align: center; font-size: 1.1rem; font-weight: bold; background: rgba(0,0,0,0.5); border-radius: 4px; margin: 2px 0;}
+        .card-text { font-size: 0.6rem; overflow: hidden; height: 50px; line-height: 1.2; }
+
+        #action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .btn { padding: 12px; border: none; border-radius: 5px; background: #444; color: white; cursor: pointer; font-weight: bold; }
+        .btn:hover:not(:disabled) { background: #666; }
+        .btn.active { background: var(--neutral-color); color: black; box-shadow: 0 0 10px var(--neutral-color); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #log-area { flex-grow: 1; background: #000; border: 1px solid #333; padding: 10px; overflow-y: auto; font-size: 0.8rem; font-family: monospace; color: #ccc; max-height: 150px;}
+        .log-p1 { color: var(--p1-color); }
+        .log-p2 { color: var(--p2-color); }
+        .log-sys { color: var(--neutral-color); }
+        .log-warn { color: #ff4444; font-weight: bold; }
+
+        /* --- Tutorials & Modals --- */
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-box { background: var(--panel-bg); width: 500px; padding: 30px; border-radius: 10px; border: 2px solid var(--neutral-color); text-align: center; position: relative; box-shadow: 0 0 20px #000; }
+        .modal-close { position: absolute; top: 10px; right: 15px; cursor: pointer; font-size: 1.5rem; color: #888; }
+        .tut-nav { display: flex; justify-content: space-between; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-    <h1>침묵의 의회 (The Silent Council)</h1>
+<header>
+    <button id="tutorial-btn" onclick="openTutorial()">?</button>
+    <h1>THE SILENT COUNCIL</h1>
+</header>
 
-    <div id="game-info">
-        <div class="info-box">
-            라운드: <span id="round-indicator">1</span>/6
+<div id="game-container">
+    <div id="left-panel">
+        <div id="map-area">
+            </div>
+        <div id="log-area">
+            <div>시스템 가동... 아크(Ark) 접속 완료.</div>
         </div>
-        <div class="info-box" style="width: 300px;">
-            안정도 트랙: <span id="stability-value">0</span>
-            <div id="stability-bar" style="background: linear-gradient(to right, var(--p2-color) 0%, var(--p2-color) 50%, var(--p1-color) 50%, var(--p1-color) 100%);">
-                <span id="stability-marker" style="margin-left: 50%; width: 5px; background: #000;"></span>
+    </div>
+
+    <div id="right-panel">
+        <div class="status-card">
+            <div style="display:flex; justify-content:space-between;">
+                <span>Round: <span id="round-val">1</span>/6</span>
+                <span id="turn-val" style="color:var(--p1-color)">집정관(P1) 턴</span>
+            </div>
+            <div style="margin-top:10px;">
+                안정도 (Stability): <span id="stab-val">0</span>
+                <div id="stability-track"><div id="stability-marker" style="left:50%"></div></div>
+            </div>
+            <div style="margin-top:10px;">
+                위기 (Crisis): <span id="crisis-val">0</span>/5
+                <div id="crisis-track"><div id="crisis-fill"></div></div>
             </div>
         </div>
-        <div class="info-box">
-            위기 수치: <span id="crisis-value">0</span>/5
-            <div id="crisis-bar"><div id="crisis-bar-fill"></div></div>
-        </div>
-    </div>
 
-    <div id="map-container">
+        <div class="status-card">
+            <div style="margin-bottom:5px;">보유 카드 (남은 행동: <span id="actions-val">6</span>)</div>
+            <div id="hand-area">
+                </div>
         </div>
 
-    <div id="current-status">
-        턴: <span id="turn-indicator">집정관 (P1)</span> | 남은 행동: <span id="actions-left">4</span> | 현재 OP: <span id="current-op">0</span>
-    </div>
-
-    <h2>당신의 손패 (집정관 P1)</h2>
-    <div id="hand-container">
+        <div class="status-card">
+            <div style="margin-bottom:5px;">작전 (현재 OP: <span id="op-val" style="color:var(--neutral-color)">0</span>)</div>
+            <div id="action-buttons">
+                <button class="btn" id="btn-deploy" onclick="setOpMode('deploy')">배치 (1)</button>
+                <button class="btn" id="btn-remove" onclick="setOpMode('remove')">제거 (2)</button>
+                <button class="btn" id="btn-move" onclick="setOpMode('move_start')">이동 (1)</button>
+                <button class="btn" id="btn-crisis" onclick="doCrisisReduction()">재정비 (2)</button>
+            </div>
+            <button class="btn" id="btn-pass" style="width:100%; margin-top:10px; background:#553333;" onclick="passTurn()">턴 종료 (남은 OP 포기)</button>
         </div>
-
-    <div id="op-actions">
-        <button class="action-button" id="op-deploy-btn" disabled>배치 (1 OP)</button>
-        <button class="action-button" id="op-remove-btn" disabled>제거 (2 OP)</button>
-        <button class="action-button" id="op-move-btn" disabled>이동 (1 OP)</button>
-        <button class="action-button" id="op-reorganize-btn" disabled>재정비 (2 OP, 위기 $\downarrow 1$)</button>
-        <button class="action-button" id="end-turn-btn" disabled>턴 종료 (히든 카드 선택)</button>
     </div>
+</div>
+
+<div id="modal-overlay">
+    <div class="modal-box">
+        <span class="modal-close" onclick="closeModal()">&times;</span>
+        <h2 id="tut-title">게임 목표</h2>
+        <div id="tut-content" style="min-height: 120px; text-align: left; line-height: 1.6; font-size: 0.95rem; color:#ddd;"></div>
+        <div class="tut-nav">
+            <button class="btn" onclick="prevTut()">이전</button>
+            <span id="tut-page" style="line-height: 40px;">1 / 5</span>
+            <button class="btn" onclick="nextTut()">다음</button>
+        </div>
+    </div>
+</div>
+
+<script>
+/** * --- DATA & CONFIG --- 
+ */
+const ZONES = [
+    { id: 0, name: "행정", opVal: 1, adj: [1, 2, 6], desc: "장악: 인접 무료 배치" },
+    { id: 1, name: "언론", opVal: 2, adj: [0, 3, 4], desc: "장악: 상대 카드 위기 무효" },
+    { id: 2, name: "군사", opVal: 3, adj: [0, 5],    desc: "장악: 라운드 끝 인접 제거" },
+    { id: 3, name: "상업", opVal: 1, adj: [1, 6, 4], desc: "장악: 중립 카드 회수" }, 
+    { id: 4, name: "빈민", opVal: 2, adj: [1, 3, 5], desc: "장악: 제거 비용 감소" },
+    { id: 5, name: "공업", opVal: 3, adj: [2, 4, 6], desc: "장악: 제거 면역" },
+    { id: 6, name: "연구", opVal: 2, adj: [0, 3, 5], desc: "장악: 덱 정보 확인" }
+];
+
+const CARDS_DB = [
+    { name: "긴급 통행 제한", op: 1, crisis: 0, type: 'P1', text: "[군사] 큐브 2개 배치 / 상대 큐브 1개 제거" },
+    { name: "여론 통제", op: 2, crisis: 1, type: 'P1', text: "상대 손패 버림 / [언론] 상대 큐브 1개 배치" },
+    { name: "정치 자금", op: 3, crisis: 0, type: 'P1', text: "안정도 +1 / 자신 큐브 1개 제거" },
+    { name: "시민 저항", op: 1, crisis: 1, type: 'P2', text: "[빈민] 큐브 2개 배치 / [행정] 상대 큐브 1개 배치" },
+    { name: "총파업", op: 3, crisis: 1, type: 'P2', text: "안정도 -1 / [공업] 상대 큐브 1개 배치" },
+    { name: "해킹", op: 2, crisis: 0, type: 'P2', text: "[상업] 상대 제거 / 상대 손패 덱 밑으로" },
+    { name: "자연재해", op: 1, crisis: 2, type: 'N', text: "랜덤 구역 양측 큐브 1개씩 제거" },
+    { name: "해외 원조", op: 3, crisis: 0, type: 'N', text: "이번 턴 OP +1 추가" },
+    { name: "긴급 의료", op: 2, crisis: 0, type: 'N', text: "위기 수치 -1" }
+];
+
+function createDeck() {
+    let d = [];
+    for(let i=0; i<4; i++) d = d.concat(JSON.parse(JSON.stringify(CARDS_DB)));
+    return d.sort(() => Math.random() - 0.5);
+}
+
+/** * --- STATE --- 
+ */
+let state = {
+    round: 1,
+    turnPlayer: 1, // 1: P1, -1: P2
+    actionsLeft: 6, // 총 6번의 카드 사용 기회 (수정: 4 -> 6)
+    stability: 0,
+    crisis: 0,
+    board: [], 
+    p1Hand: [],
+    p2Hand: [],
+    deck: [],
+    discard: [],
+    currentOP: 0,
+    opMode: null, // 'deploy', 'remove', 'move_start', 'move_end'
+    moveSourceIdx: null,
+    gameOver: false
+};
+
+/** * --- INIT & RENDER --- 
+ */
+function init() {
+    state.board = ZONES.map(z => ({ ...z, p1: 0, p2: 0, dom: 0 }));
+    state.board[0].p1 = 1; // Initial Setup
+    state.board[6].p2 = 1;
+    state.deck = createDeck();
+    state.discard = [];
+    state.stability = 0;
+    state.crisis = 0;
+    state.round = 1;
+    state.gameOver = false;
     
-    <div id="log">게임 로그:</div>
+    startRound();
+    openTutorial(); 
+}
 
-    <script>
-        // --- 1. GAME DATA ---
-        const GAME_DATA = {
-            // ZONES and CARDS data remain the same as the final design.
-            ZONES: [
-                { id: 1, name: "행정", opValue: 1, connections: [1, 2, 6], pos: 0 },
-                { id: 2, name: "언론", opValue: 2, connections: [0, 3, 4], pos: 1 },
-                { id: 3, name: "군사", opValue: 3, connections: [0, 5], pos: 2 },
-                { id: 4, name: "상업", opValue: 1, connections: [1, 6, 4], pos: 3 },
-                { id: 5, name: "빈민", opValue: 2, connections: [1, 3, 5], pos: 4 },
-                { id: 6, name: "공업", opValue: 3, connections: [2, 4, 6], pos: 5 },
-                { id: 7, name: "연구", opValue: 2, connections: [0, 3, 5], pos: 6 },
-            ],
-            CARDS: [
-                ...Array(2).fill({ name: "긴급 통행 제한", op: 1, crisis: 0, type: 'P1', event: "[군사]에 큐브 2개 배치.", forced: "상대(P1) 큐브 1개 제거." }),
-                ...Array(2).fill({ name: "여론 통제", op: 2, crisis: 1, type: 'P1', event: "상대 손패 1장 보고 버린 카드 더미로.", forced: "[언론]에 상대(P1) 큐브 1개 배치." }),
-                ...Array(2).fill({ name: "정치 자금 수혈", op: 3, crisis: 0, type: 'P1', event: "안정도 트랙 P1 방향 1칸 이동.", forced: "맵에서 자신의 큐브 1개 제거." }),
-                ...Array(2).fill({ name: "첩보망 확보", op: 1, crisis: 0, type: 'P1', event: "[연구] 구역에서 상대 큐브 1개 제거.", forced: "[행정]에 상대(P1) 큐브 1개 배치." }),
-                ...Array(2).fill({ name: "체제 선전 방송", op: 2, crisis: 1, type: 'P1', event: "이번 턴 OP +1 추가.", forced: "안정도 트랙 P1 방향 1칸 이동." }),
-                ...Array(2).fill({ name: "쿠데타 준비", op: 3, crisis: 2, type: 'P1', event: "상대 장악 구역 1곳 장악 해제 및 큐브 1개 제거.", forced: "상대 장악 구역 1곳 장악 해제." }),
-                ...Array(2).fill({ name: "보안 강화", op: 0, crisis: 0, type: 'P1', event: "다음 턴 상대 첫 작전 OP 비용 +1.", forced: null }),
+function startRound() {
+    if(state.round > 6) return endGame("6라운드 종료. 최종 점수 계산.");
+    
+    // Draw cards
+    if(state.deck.length < 10) {
+        state.deck = state.deck.concat(state.discard).sort(() => Math.random() - 0.5);
+        state.discard = [];
+        log("덱을 다시 섞었습니다.", 'sys');
+    }
 
-                ...Array(2).fill({ name: "시민 저항 물결", op: 1, crisis: 1, type: 'P2', event: "[빈민]에 큐브 2개 배치.", forced: "[행정]에 상대(P2) 큐브 1개 배치." }),
-                ...Array(2).fill({ name: "해킹 및 유출", op: 2, crisis: 0, type: 'P2', event: "[상업] 구역에서 상대 큐브 1개 제거.", forced: "상대 손패 1장 덱 맨 밑으로." }),
-                ...Array(2).fill({ name: "총파업 선포", op: 3, crisis: 1, type: 'P2', event: "안정도 트랙 P2 방향 1칸 이동.", forced: "[공업]에 상대(P2) 큐브 1개 배치." }),
-                ...Array(2).fill({ name: "집단 시위 조직", op: 1, crisis: 0, type: 'P2', event: "이번 턴 제거 작전 OP 비용 -1.", forced: "[언론]에 상대(P2) 큐브 1개 배치." }),
-                ...Array(2).fill({ name: "게릴라 자원 확보", op: 2, crisis: 0, type: 'P2', event: "[연구] 큐브 1개 배치 및 제거 작전 1회 무료.", forced: "맵에서 자신의 큐브 1개 제거." }),
-                ...Array(2).fill({ name: "지하 조직 결성", op: 3, crisis: 2, type: 'P2', event: "상대 장악 구역 1곳 장악 해제 및 큐브 1개 제거.", forced: "상대 장악 구역 1곳 장악 해제." }),
-                ...Array(2).fill({ name: "기회 포착", op: 0, crisis: 0, type: 'P2', event: "이번 턴 사용하지 않은 OP는 다음 턴으로 이월.", forced: null }),
+    // ⬇️⬇️⬇️ 수정된 드로우 로직 (핸드 유지) ⬇️⬇️⬇️
+    // P1 드로우: 5장이 될 때까지만 드로우
+    const p1DrawCount = 5 - state.p1Hand.length;
+    if (p1DrawCount > 0) {
+        state.p1Hand = state.p1Hand.concat(state.deck.splice(0, p1DrawCount));
+        log(`집정관 ${p1DrawCount}장 드로우 (총 ${state.p1Hand.length}장)`, 'p1');
+    }
+    // P2 드로우: 5장이 될 때까지만 드로우
+    const p2DrawCount = 5 - state.p2Hand.length;
+    if (p2DrawCount > 0) {
+        state.p2Hand = state.p2Hand.concat(state.deck.splice(0, p2DrawCount));
+        log(`선동가 ${p2DrawCount}장 드로우 (총 ${state.p2Hand.length}장)`, 'p2');
+    }
+    // ⬆️⬆️⬆️ 수정된 드로우 로직 ⬆️⬆️⬆️
+    
+    // ⬇️⬇️⬇️ actionsLeft 초기값 변경 (4 -> 6) ⬇️⬇️⬇️
+    state.actionsLeft = 6; 
+    // ⬆️⬆️⬆️ actionsLeft 초기값 변경 ⬆️⬆️⬆️
 
-                ...Array(2).fill({ name: "자연재해", op: 1, crisis: 2, type: 'N', event: "무작위 구역 1곳 양측 큐브 1개씩 제거.", forced: null }),
-                ...Array(2).fill({ name: "긴급 의료 지원", op: 2, crisis: 0, type: 'N', event: "위기 수치 -1점.", forced: null }),
-                ...Array(2).fill({ name: "해외 자원 유입", op: 3, crisis: 0, type: 'N', event: "이번 턴 OP +1 추가.", forced: null }),
-                ...Array(2).fill({ name: "기술적 돌파", op: 1, crisis: 0, type: 'N', event: "사용 후 이 카드를 버리지 않고 다음 턴 손패 유지.", forced: null }),
-                ...Array(4).fill({ name: "정전 사태", op: 1, crisis: 1, type: 'N', event: "다음 턴 상대 첫 작전 OP 비용 +1.", forced: null }),
-            ],
-        };
-        
-        // --- 2. GAME STATE ---
-        let currentBoard = []; 
-        let deck = [];
-        let discardPile = [];
-        let p1Hand = [];
-        let p2Hand = [];
-        let currentRound = 1;
-        let stability = 0; 
-        let crisis = 0; 
-        let currentPlayer = 1; 
-        let actionsLeft = 4;
-        let currentOP = 0;
-        let selectedCardIndex = -1;
-        let phase = 'card_selection'; 
-        let p1OpBuffer = 0; // '기회 포착' 이월 OP
-        let p2OpBuffer = 0;
-        let p1NextTurnOpCostIncrease = 0; // '보안 강화', '정전 사태' 효과
-        let p2NextTurnOpCostIncrease = 0; 
-        let p1RemoveCostDecrease = 0; // '군사', '빈민' 효과
-        let p2RemoveCostDecrease = 0;
-        let p1UsedEffect = { admin: false, media: false, research: false, commercial: false };
-        let p2UsedEffect = { admin: false, media: false, research: false, commercial: false };
+    state.turnPlayer = 1; // Round always starts with P1
+    state.currentOP = 0;
+    state.opMode = null;
+    
+    updateUI();
+    log(`==== 라운드 ${state.round} 시작: 집정관 턴 ====`, 'sys');
+}
 
-        // --- 3. UTILITIES & INIT ---
-        function log(message, type = 'general') {
-            const logEl = document.getElementById('log');
-            logEl.innerHTML = `<p style="color: ${type === 'crisis' ? 'red' : type === 'event' ? 'yellow' : 'white'};">
-                [R${currentRound}] ${currentPlayer === 1 ? 'P1' : 'P2'} 턴: ${message}
-            </p>` + logEl.innerHTML;
+function updateUI() {
+    // 1. Labels
+    document.getElementById('round-val').innerText = state.round;
+    document.getElementById('turn-val').innerText = state.turnPlayer === 1 ? "집정관 (P1)" : "선동가 (P2)";
+    document.getElementById('turn-val').style.color = state.turnPlayer === 1 ? "var(--p1-color)" : "var(--p2-color)";
+    document.getElementById('stab-val').innerText = state.stability;
+    document.getElementById('crisis-val').innerText = state.crisis;
+    document.getElementById('actions-val').innerText = state.actionsLeft;
+    document.getElementById('op-val').innerText = state.currentOP;
+
+    // 2. Bars
+    const stabPer = 50 + (state.stability * 5); // -10 (0%) to +10 (100%)
+    document.getElementById('stability-marker').style.left = `${Math.min(100, Math.max(0, stabPer))}%`;
+    document.getElementById('crisis-fill').style.width = `${(state.crisis / 5) * 100}%`;
+
+    // 3. Map
+    renderMap();
+    // 4. Hand
+    renderHand();
+    // 5. Buttons
+    updateButtons();
+}
+
+function renderMap() {
+    const container = document.getElementById('map-area');
+    container.innerHTML = '';
+    
+    const gridPos = [
+        "1 / 2", "2 / 1", "1 / 3", 
+        "3 / 2", "2 / 2", "2 / 3", "3 / 3"
+    ];
+
+    state.board.forEach((z, idx) => {
+        const el = document.createElement('div');
+        el.className = `zone ${z.dom === 1 ? 'dominated-p1' : z.dom === -1 ? 'dominated-p2' : ''}`;
+        el.style.gridArea = gridPos[idx];
+
+        // Highlights (Only if P1 turn and has OP)
+        if (state.turnPlayer === 1 && state.currentOP > 0) {
+            if (state.opMode === 'deploy' && canDeploy(idx, 1)) el.classList.add('valid-target');
+            if (state.opMode === 'remove' && canRemove(idx, 1)) el.classList.add('valid-target');
+            if (state.opMode === 'move_start' && canMoveStart(idx, 1)) el.classList.add('valid-target');
+            if (state.opMode === 'move_end' && canMoveEnd(state.moveSourceIdx, idx)) el.classList.add('valid-target');
         }
+        if (state.opMode === 'move_end' && state.moveSourceIdx === idx) el.classList.add('selected-source');
 
-        function shuffle(array) {
-            for (let i = array.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [array[i], array[j]] = [array[j], array[i]];
+        const dominationEffect = (z.dom !== 0) 
+            ? `<div class="zone-effect">${z.dom === 1 ? 'P1 장악' : 'P2 장악'}: ${z.desc}</div>` 
+            : `<div class="zone-effect" style="height:1.2em;"></div>`;
+
+
+        el.innerHTML = `
+            <div class="zone-name" style="color:${z.dom===1?'var(--p1-color)':z.dom===-1?'var(--p2-color)':'#fff'}">${z.name} (${z.opVal})</div>
+            <div class="cube-display">
+                <span class="p1-count">■ ${z.p1}</span>
+                <span class="p2-count">■ ${z.p2}</span>
+            </div>
+            ${dominationEffect}
+        `;
+        el.onclick = () => handleZoneClick(idx);
+        container.appendChild(el);
+    });
+}
+
+function renderHand() {
+    const container = document.getElementById('hand-area');
+    container.innerHTML = '';
+    
+    // Show P1 Hand
+    if(state.turnPlayer === 1) {
+        state.p1Hand.forEach((card, idx) => {
+            const el = document.createElement('div');
+            el.className = `card ${card.type === 'P1' ? 'p1' : card.type === 'P2' ? 'p2' : 'neutral'}`;
+            el.innerHTML = `
+                <div class="card-title">${card.name}</div>
+                <div class="card-op">${card.op} OP ${card.crisis > 0 ? '🔥'+card.crisis : ''}</div>
+                <div class="card-text">${card.text}</div>
+            `;
+            el.onclick = () => playCard(idx);
+            container.appendChild(el);
+        });
+    } else {
+        // Show P2 Hand size
+        for(let i=0; i<state.p2Hand.length; i++) {
+            const el = document.createElement('div');
+            el.className = `card p2`;
+            el.style.opacity = 0.5;
+            el.style.pointerEvents = 'none';
+            el.innerHTML = `<div class="card-title">선동가 카드</div><div style="text-align:center;">?</div>`;
+            container.appendChild(el);
+        }
+    }
+}
+
+function updateButtons() {
+    const hasOp = state.currentOP > 0;
+    const isP1 = state.turnPlayer === 1;
+    const actionsUsed = (6 - state.actionsLeft) > 0;
+    
+    document.getElementById('btn-deploy').disabled = !isP1 || !hasOp || state.currentOP < 1;
+    document.getElementById('btn-remove').disabled = !isP1 || !hasOp || state.currentOP < 2;
+    document.getElementById('btn-move').disabled = !isP1 || !hasOp || state.currentOP < 1;
+    document.getElementById('btn-crisis').disabled = !isP1 || !hasOp || state.currentOP < 2;
+    document.getElementById('btn-pass').disabled = !isP1 || !actionsUsed; // Can't pass if card hasn't been played
+
+    // Reset actives
+    ['deploy', 'remove', 'move', 'crisis'].forEach(m => document.getElementById(`btn-${m}`).classList.remove('active'));
+    if(state.opMode === 'move_start' || state.opMode === 'move_end') document.getElementById('btn-move').classList.add('active');
+    else if(state.opMode) document.getElementById(`btn-${state.opMode}`).classList.add('active');
+}
+
+/** * --- GAME ACTIONS --- 
+ */
+
+function playCard(idx) {
+    if (state.turnPlayer !== 1 || state.actionsLeft <= 0 || state.gameOver) return;
+    if (state.currentOP > 0) { alert("남은 OP를 먼저 사용하거나 [턴 종료]를 누르세요."); return; }
+
+    const card = state.p1Hand[idx];
+    
+    const useOp = confirm(`[${card.name}]\n내용: ${card.text}\n\n[확인] = 작전(OP ${card.op})으로 사용\n[취소] = 이벤트로 사용`);
+    
+    if (useOp) {
+        // OP Mode
+        if (card.type === 'P2') {
+            log(`⚠ 딜레마! 상대 카드(${card.name})를 사용하여 OP ${card.op} 획득. 선동가 이벤트 발동!`, 'warn');
+            triggerEventText(card.text, -1);
+            state.crisis += card.crisis;
+        }
+        state.currentOP += card.op;
+        log(`OP ${card.op} 획득. 작전을 수행하세요.`, 'sys');
+    } else {
+        // Event Mode (if not P2 card)
+        if (card.type === 'P2') { alert("상대방 카드는 이벤트로 쓸 수 없습니다."); return; }
+        triggerEventText(card.text, 1);
+        state.crisis += card.crisis;
+        state.currentOP = 0; // Event use immediately ends OP gain phase
+    }
+
+    state.p1Hand.splice(idx, 1);
+    state.discard.push(card);
+    state.actionsLeft--;
+    
+    checkGameStatus();
+    updateUI();
+    
+    // If card was used as Event (0 OP gained) or a P2 card was used for OP
+    if (!useOp || card.type !== 'P1' && card.type !== 'N') {
+        // Immediate turn switch if no OP to spend (Event use)
+        if (state.currentOP === 0) {
+            log("이벤트 사용 완료. 턴 종료.", 'sys');
+            state.turnPlayer = -1;
+            updateUI();
+            setTimeout(endRoundPhase, 1000); // Check phase logic
+        }
+    }
+}
+
+function triggerEventText(text, player) {
+    log(`${player===1?'집정관':'선동가'} 효과: ${text}`, player===1?'p1':'p2');
+    
+    if(text.includes("안정도 +1")) state.stability++;
+    if(text.includes("안정도 -1")) state.stability--;
+    if(text.includes("위기 수치 -1")) state.crisis = Math.max(0, state.crisis - 1);
+    if(text.includes("OP +1")) state.currentOP++;
+    
+    const zoneMatch = text.match(/\[(.*?)\]/);
+    if(zoneMatch) {
+        const zoneName = zoneMatch[1];
+        const zone = state.board.find(z => z.name === zoneName);
+        if(zone) {
+            // Simplified execution of effects
+            const targetP = (player===1) ? zone.p1 : zone.p2;
+            const oppP = (player===1) ? zone.p2 : zone.p1;
+
+            if(text.includes("큐브 2개 배치")) {
+                if(player===1) zone.p1+=2; else zone.p2+=2;
+            } else if(text.includes("큐브 1개 배치")) {
+                if(player===1) zone.p1++; else zone.p2++;
+            } else if(text.includes("상대 큐브 1개 제거") || text.includes("상대 제거")) {
+                if(player===1) zone.p2 = Math.max(0, zone.p2-1);
+                else zone.p1 = Math.max(0, zone.p1-1);
+            } else if(text.includes("자신 큐브 1개 제거")) {
+                if(player===1) zone.p1 = Math.max(0, zone.p1-1);
+                else zone.p2 = Math.max(0, zone.p2-1);
             }
-            return array;
+            checkDomination(zone);
         }
+    }
+}
+
+function setOpMode(mode) {
+    if(state.currentOP === 0) return alert("OP가 없습니다. 카드를 사용하세요.");
+    state.opMode = mode;
+    state.moveSourceIdx = null;
+    log(`작전 선택: ${mode}`, 'sys');
+    updateUI();
+}
+
+function doCrisisReduction() {
+    if(state.currentOP >= 2) {
+        state.currentOP -= 2;
+        state.crisis = Math.max(0, state.crisis - 1);
+        log("위기 수치 1 감소", 'p1');
+        updateUI();
+    } else {
+        alert("재정비에는 2 OP가 필요합니다.");
+    }
+}
+
+function passTurn() {
+    const actionsUsed = (6 - state.actionsLeft);
+    if(actionsUsed === 0) return; // Must play a card first
+    
+    if(state.currentOP > 0) {
+        log(`남은 OP (${state.currentOP}) 포기`, 'warn');
+    }
+    
+    state.currentOP = 0;
+    state.opMode = null;
+    state.turnPlayer = -1; // Switch to AI
+    
+    updateUI();
+    setTimeout(endRoundPhase, 1000); // Trigger next phase (AI turn or end round)
+}
+
+function handleZoneClick(idx) {
+    if(state.turnPlayer !== 1 || state.currentOP === 0) return;
+    const zone = state.board[idx];
+
+    let actionTaken = false;
+
+    // DEPLOY
+    if(state.opMode === 'deploy' && state.currentOP >= 1 && canDeploy(idx, 1)) {
+        state.currentOP--;
+        zone.p1++;
+        checkDomination(zone);
+        log(`${zone.name}에 배치`, 'p1');
+        actionTaken = true;
+    }
+    // REMOVE
+    else if(state.opMode === 'remove' && state.currentOP >= 2 && canRemove(idx, 1)) {
+        state.currentOP -= 2;
+        zone.p2--;
+        checkDomination(zone);
+        log(`${zone.name}에서 적 제거`, 'p1');
+        actionTaken = true;
+    }
+    // MOVE START
+    else if(state.opMode === 'move_start' && state.currentOP >= 1 && canMoveStart(idx, 1)) {
+        state.moveSourceIdx = idx;
+        state.opMode = 'move_end';
+    }
+    // MOVE END
+    else if(state.opMode === 'move_end') {
+        if(state.currentOP >= 1 && canMoveEnd(state.moveSourceIdx, idx)) {
+            state.currentOP--;
+            state.board[state.moveSourceIdx].p1--;
+            checkDomination(state.board[state.moveSourceIdx]);
+            zone.p1++;
+            checkDomination(zone);
+            log(`${state.board[state.moveSourceIdx].name} -> ${zone.name} 이동`, 'p1');
+            actionTaken = true;
+        } else {
+            // Cancel move selection
+            state.opMode = 'move_start';
+            state.moveSourceIdx = null;
+        }
+    }
+
+    if (actionTaken) {
+        // After an action, if OP is left, player can choose another action.
+        // If OP is 0, reset mode and switch turn.
+        if (state.currentOP === 0) {
+            state.opMode = null;
+            log("OP 소진. 턴 종료.", 'sys');
+            state.turnPlayer = -1;
+            updateUI();
+            setTimeout(endRoundPhase, 500); // Check phase logic
+        } else {
+            // If OP > 0, reset mode to null to force button click for next action
+            state.opMode = null; 
+        }
+    }
+    updateUI();
+}
+
+// Check Logic
+function canDeploy(idx, p) {
+    if((p===1?state.board[idx].p1:state.board[idx].p2) > 0) return true;
+    for(let adj of state.board[idx].adj) {
+        if((p===1?state.board[adj].p1:state.board[adj].p2) > 0) return true;
+    }
+    return false;
+}
+function canRemove(idx, p) {
+    if(idx === 5 && state.board[idx].dom === (p===1?-1:1)) return false; 
+    return (p===1?state.board[idx].p2:state.board[idx].p1) > 0;
+}
+function canMoveStart(idx, p) {
+    return (p===1?state.board[idx].p1:state.board[idx].p2) > 0;
+}
+function canMoveEnd(from, to) {
+    return state.board[from].adj.includes(to);
+}
+function checkDomination(zone) {
+    const diff = zone.p1 - zone.p2;
+    if(diff >= 2) zone.dom = 1;
+    else if(diff <= -2) zone.dom = -1;
+    else zone.dom = 0;
+}
+
+/** * --- END GAME CHECKS --- 
+ */
+function checkGameStatus() {
+    if(state.crisis >= 5) {
+        state.stability = -10;
+        return endGame("위기 수치 초과! 선동가 승리.");
+    }
+    if(state.stability >= 10) return endGame("안정도 최대치! 집정관 승리!");
+    if(state.stability <= -10) return endGame("안정도 최저치! 선동가 승리!");
+}
+
+function endGame(message) {
+    state.gameOver = true;
+    log(`GAME OVER: ${message}`, 'warn');
+    alert(`게임 종료!\n\n${message}`);
+}
+
+function endRoundPhase() {
+    checkGameStatus();
+    if(state.gameOver) return;
+
+    // Check if all actions are used (6 actions)
+    if (state.actionsLeft === 0) {
+        // Both players finished their 6 actions - END ROUND
+
+        // Stability calculation
+        let shift = 0;
+        state.board.forEach(z => {
+            if(z.dom === 1) shift += z.opVal;
+            if(z.dom === -1) shift -= z.opVal;
+        });
+        state.stability += shift;
+        log(`라운드 종료. 안정도 변화: ${shift}`, 'sys');
         
-        function getPlayerHand() {
-            return currentPlayer === 1 ? p1Hand : p2Hand;
-        }
-
-        function getOpponentHand() {
-            return currentPlayer === 1 ? p2Hand : p1Hand;
-        }
-
-        function initGame() {
-            currentBoard = GAME_DATA.ZONES.map(zone => ({
-                ...zone, p1: 0, p2: 0, dominated: 0, p1EffectUsed: false, p2EffectUsed: false
-            }));
-            currentBoard[0].p1 = 1; 
-            currentBoard[6].p2 = 1;
-
-            deck = shuffle([...GAME_DATA.CARDS]);
-            discardPile = [];
-            currentRound = 1; stability = 0; crisis = 0; currentPlayer = 1;
-            
-            log("게임 시작! 집정관(P1)이 선입니다.", 'init');
+        // 🚨 남은 핸드 카드는 다음 라운드로 이월됨 (버려지지 않음)
+        log(`집정관 손패: ${state.p1Hand.length}장 유지, 선동가 손패: ${state.p2Hand.length}장 유지.`, 'sys');
+        
+        checkGameStatus();
+        if(!state.gameOver) {
+            state.round++;
             startRound();
         }
+        return;
+    }
 
-        function drawCards() {
-            if (deck.length < 10) {
-                deck = shuffle([...discardPile]);
-                discardPile = [];
-                log("덱을 다시 섞습니다.", 'init');
-            }
-            p1Hand = deck.splice(0, 5);
-            p2Hand = deck.splice(0, 5);
-        }
+    // Actions remaining, check whose turn it is
+    if (state.turnPlayer === 1) {
+        // P1's turn is already active if we are here.
+        log("집정관 턴", 'p1');
+        updateUI(); // Ensure UI is updated for P1
+    } else {
+        // AI's turn
+        log("선동가 턴", 'p2');
+        updateUI();
+        setTimeout(aiTurn, 1000);
+    }
+}
 
-        function startRound() {
-            if(stability >= 10) { alert("집정관 승리!"); return; }
-            if(stability <= -10) { alert("선동가 승리!"); return; }
-            if(currentRound > 6) {
-                if (stability > 0) alert("집정관 승리!");
-                else if (stability < 0) alert("선동가 승리!");
-                else alert("무승부!");
-                return;
-            }
-            
-            drawCards();
-            actionsLeft = 4;
-            currentOP = 0;
-            selectedCardIndex = -1;
-            currentPlayer = (currentRound % 2 !== 0) ? 1 : -1;
-            
-            // Apply carry-over OP ('기회 포착')
-            currentOP = currentPlayer === 1 ? p1OpBuffer : p2OpBuffer;
-            if (currentPlayer === 1) p1OpBuffer = 0; else p2OpBuffer = 0;
+/** * --- AI (GREEDY) --- 
+ */
+function aiTurn() {
+    if(state.gameOver || state.actionsLeft <= 0 || state.turnPlayer !== -1) return;
+    
+    // 1. Play Card (Only one card per turn)
+    // AI Strategy: Use P1 cards as OP first, then Neutral cards as event if needed, then P2 cards.
+    let cardIdx = -1;
+    
+    // Priority 1: Use P1 cards for OP (causes P1 event)
+    cardIdx = state.p2Hand.findIndex(card => card.type === 'P1');
+    
+    // Priority 2: Use Neutral cards for OP
+    if (cardIdx === -1) {
+        cardIdx = state.p2Hand.findIndex(card => card.type === 'N');
+    }
+    
+    // Priority 3: Use P2 cards for OP
+    if (cardIdx === -1) {
+        cardIdx = state.p2Hand.findIndex(card => card.type === 'P2');
+    }
+    
+    if (cardIdx === -1) {
+        // Should not happen if hand has cards, but just in case
+        log("AI가 카드를 사용하지 못했습니다. 턴 종료.", 'p2');
+        state.turnPlayer = 1;
+        endRoundPhase();
+        return;
+    }
+    
+    const card = state.p2Hand[cardIdx];
+    
+    // Use card
+    if(card.type === 'P1') {
+        log(`AI가 [${card.name}] 사용 -> 집정관 이벤트 강제 발동!`, 'p1');
+        triggerEventText(card.text, 1); // P1 benefits
+        state.crisis += card.crisis;
+    } else {
+        log(`AI가 [${card.name}] 사용 (OP ${card.op} 획득)`, 'p2');
+    }
+    
+    state.currentOP += card.op;
+    state.p2Hand.splice(cardIdx, 1);
+    state.discard.push(card);
+    state.actionsLeft--;
+    checkGameStatus();
+    updateUI();
 
-            // Apply per-round start effects (e.g., 상업 독점)
-            applyRoundStartEffects();
+    // 2. Use OP
+    setTimeout(() => {
+        while(state.currentOP > 0 && !state.gameOver) {
+            let actionDone = false;
             
-            log(`--- 라운드 ${currentRound} 시작 ---`, 'round');
-
-            updateUI();
-            if (currentPlayer === -1) {
-                setTimeout(aiTurn, 500); 
-            }
-        }
-        
-        function applyRoundStartEffects() {
-            p1UsedEffect = { admin: false, media: false, research: false, commercial: false };
-            p2UsedEffect = { admin: false, media: false, research: false, commercial: false };
+            // Priority: Deploy to dominate/prevent P1 dom > Remove P1 (2 OP)
             
-            // Check for P1 '시장 독점' (상업 ID: 4)
-            const p1Com = currentBoard.find(z => z.id === 4 && z.dominated === 1);
-            if (p1Com) {
-                const neutralCardIndex = discardPile.findIndex(c => c.type === 'N');
-                if (neutralCardIndex !== -1) {
-                    const card = discardPile.splice(neutralCardIndex, 1)[0];
-                    p1Hand.push(card);
-                    log("P1 [시장 독점]: 버린 카드에서 중립 카드 회수.", 'event');
+            // Try Remove P1 (Cost 2)
+            if(state.currentOP >= 2) {
+                const targets = state.board.filter(z => z.p1 > 0 && z.dom !== -1 && canRemove(z.id, -1));
+                if (targets.length > 0) {
+                    const z = targets.sort((a,b) => b.p1 - a.p1)[0];
+                    z.p1--;
+                    state.currentOP -= 2;
+                    checkDomination(z);
+                    log(`AI: ${z.name}에서 집정관 큐브 제거`, 'p2');
+                    actionDone = true;
                 }
             }
-            // ... P2 '시장 독점' (상업 ID: 4) 도 동일하게 구현 필요
             
-            // Apply P1 '계엄령' (군사 ID: 3)
-            const p1Mil = currentBoard.find(z => z.id === 3 && z.dominated === 1);
-            if (p1Mil) {
-                for (const connIndex of p1Mil.connections) {
-                    currentBoard[connIndex].p2 = Math.max(0, currentBoard[connIndex].p2 - 1);
-                    checkDomination(connIndex);
-                }
-                log("P1 [계엄령]: 인접 구역 상대 큐브 제거.", 'event');
-            }
-            // ... P2 '계엄령' (군사 ID: 3) 도 동일하게 구현 필요
-        }
-
-        // ... UI Functions (updateUI, updateActionButtons, etc.) are omitted for brevity, assuming they are robust.
-
-        // --- 4. GAME ACTIONS ---
-
-        function handleCardSelection(index) {
-            if (currentPlayer !== 1 || actionsLeft === 0) return;
-            selectedCardIndex = index;
-            updateUI();
-
-            const currentCard = p1Hand[index];
-            const canEvent = (currentCard.type === 'P1' || currentCard.type === 'N') && currentCard.op !== 0; // OP 0 카드(보안강화)는 이벤트로만 사용
-
-            const action = confirm(`[${currentCard.name}] 카드를 사용합니다.\n\n1. 작전(OP ${currentCard.op})으로 사용\n2. 이벤트로 사용${canEvent ? '' : ' (자신 진영 카드 아님)'}`);
-            
-            if (action) {
-                useCardAsOP(index);
-            } else if (action === false && canEvent) {
-                if (confirm("이벤트로 사용하시겠습니까?")) {
-                    useCardAsEvent(index);
-                } else {
-                    selectedCardIndex = -1;
-                    updateUI();
-                }
-            } else {
-                selectedCardIndex = -1;
-                updateUI();
-            }
-        }
-        
-        function getRemoveCost(player) {
-            const baseCost = 2;
-            let costDecrease = 0;
-            
-            // P1's remove cost logic
-            if (player === 1) {
-                if (currentBoard.find(z => z.id === 5 && z.dominated === 1)) costDecrease = 1; // 빈민/방화벽 구축
-                if (currentBoard.find(z => z.id === 3 && z.dominated === -1)) costDecrease = 1; // 군사/게릴라 (상대방의 효과도 나에게 도움)
-            }
-            // P2's remove cost logic
-            else {
-                if (currentBoard.find(z => z.id === 5 && z.dominated === -1)) costDecrease = 1;
-                if (currentBoard.find(z => z.id === 3 && z.dominated === 1)) costDecrease = 1;
-            }
-            return Math.max(1, baseCost - costDecrease);
-        }
-
-        function useCardAsOP(index) {
-            const card = getPlayerHand()[index];
-            let actualOP = card.op;
-            
-            // 1. Check Next Turn OP Cost Increase (from '정전 사태' etc.)
-            const costIncrease = currentPlayer === 1 ? p1NextTurnOpCostIncrease : p2NextTurnOpCostIncrease;
-            if (costIncrease > 0) {
-                actualOP = Math.max(0, actualOP - costIncrease);
-                log(`OP 비용 증가(${costIncrease})로 인해 실제 OP 획득은 ${actualOP}입니다.`, 'event');
-                // Reset increase after use
-                if (currentPlayer === 1) p1NextTurnOpCostIncrease = 0; else p2NextTurnOpCostIncrease = 0;
+            // Try Crisis Reduction (Cost 2)
+            if (!actionDone && state.currentOP >= 2 && state.crisis >= 2) {
+                state.currentOP -= 2;
+                state.crisis = Math.max(0, state.crisis - 1);
+                log("AI: 위기 수치 1 감소", 'p2');
+                actionDone = true;
             }
 
-            currentOP += actualOP;
-            
-            // 2. DILLEMA CHECK: Forced Event
-            if (card.type !== (currentPlayer === 1 ? 'P1' : 'P2') && card.type !== 'N') {
-                log(`딜레마 발동! OP 획득 전 ${card.name}의 강제 이벤트 발동!`, 'crisis');
-                
-                // 2.1 Apply Forced Event
-                applyEvent(card, -currentPlayer, 'forced');
-                
-                // 2.2 Apply Crisis (to the user)
-                let crisisIncrease = card.crisis;
-                // Check P1 '여론 안정화' (언론 ID: 2)
-                if (currentPlayer === 1 && currentBoard.find(z => z.id === 2 && z.dominated === 1)) {
-                    crisisIncrease = 0;
-                    log("P1 [여론 안정화]: 위기 수치 증가 무효화.", 'event');
-                }
-                crisis += crisisIncrease;
-                checkCrisis();
-            }
-
-            // 3. Discard Card
-            const usedCard = getPlayerHand().splice(index, 1)[0];
-            discardPile.push(usedCard);
-            
-            actionsLeft--;
-            phase = 'op_action';
-            updateUI();
-        }
-
-        function useCardAsEvent(index) {
-            const card = getPlayerHand()[index];
-            
-            // 1. Apply Full Event
-            applyEvent(card, currentPlayer, 'event');
-            
-            // 2. Apply Crisis
-            crisis += card.crisis;
-            checkCrisis();
-
-            // 3. Discard Card (Unless '기술적 돌파')
-            if (card.name !== "기술적 돌파" && card.name !== "기회 포착" && card.name !== "보안 강화") {
-                const usedCard = getPlayerHand().splice(index, 1)[0];
-                discardPile.push(usedCard);
-            } else if (card.name === "기술적 돌파") {
-                log("기술적 돌파 카드는 손패에 유지됩니다.", 'event');
-            }
-            
-            actionsLeft--;
-            selectedCardIndex = -1;
-
-            if (actionsLeft === 0) {
-                phase = 'end_turn';
-            } else {
-                phase = 'card_selection';
-            }
-            updateUI();
-        }
-        
-        // --- 5. EVENT EXECUTION (CRITICAL!) ---
-        function applyEvent(card, targetPlayer, type) {
-            const isP1 = targetPlayer === 1;
-            const targetHand = isP1 ? p1Hand : p2Hand;
-            const logMsg = type === 'forced' ? `[강제 발동]: ${card.forced}` : `[이벤트 발동]: ${card.event}`;
-            log(logMsg, 'event');
-            
-            const effectText = type === 'forced' ? card.forced : card.event;
-            
-            // Implementation of all card effects (Simplified for the prototype, focusing on core mechanics)
-            if (effectText.includes("큐브 2개 배치") || effectText.includes("큐브 1개 배치")) {
-                const zoneName = effectText.match(/\[(.*?)\]/)[1];
-                const zone = currentBoard.find(z => z.name === zoneName);
-                if (zone) {
-                    const count = effectText.includes("큐브 2개") ? 2 : 1;
-                    if (isP1) zone.p1 += count; else zone.p2 += count;
-                    checkDomination(zone.pos);
-                }
-            } else if (effectText.includes("안정도 트랙")) {
-                stability += (isP1 ? 1 : -1);
-            } else if (effectText.includes("OP +1 추가")) {
-                currentOP += 1;
-            } else if (effectText.includes("위기 수치 -1점")) {
-                crisis = Math.max(0, crisis - 1);
-            } else if (effectText.includes("상대 큐브 1개 제거")) {
-                const targetZone = currentBoard.find(z => (isP1 ? z.p2 : z.p1) > 0); // Simplistic target
-                if (targetZone) {
-                    if (isP1) targetZone.p2 = Math.max(0, targetZone.p2 - 1);
-                    else targetZone.p1 = Math.max(0, targetZone.p1 - 1);
-                    checkDomination(targetZone.pos);
-                }
-            } else if (effectText.includes("장악 해제")) {
-                const targetZone = currentBoard.find(z => z.dominated === -targetPlayer);
-                 if (targetZone) {
-                    targetZone.dominated = 0;
-                    if (effectText.includes("큐브 1개 제거")) {
-                        if (isP1) targetZone.p2 = Math.max(0, targetZone.p2 - 1);
-                        else targetZone.p1 = Math.max(0, targetZone.p1 - 1);
-                    }
-                }
-            } else if (effectText.includes("다음 턴 상대 첫 작전 OP 비용 +1")) {
-                if (isP1) p2NextTurnOpCostIncrease += 1; else p1NextTurnOpCostIncrease += 1;
-            } else if (effectText.includes("무작위 구역 1곳 양측 큐브 1개씩 제거")) {
-                const randZone = currentBoard[Math.floor(Math.random() * currentBoard.length)];
-                randZone.p1 = Math.max(0, randZone.p1 - 1);
-                randZone.p2 = Math.max(0, randZone.p2 - 1);
-                checkDomination(randZone.pos);
-            } else if (effectText.includes("사용하지 않은 OP는 다음 턴으로 이월")) {
-                if (isP1) p1OpBuffer += currentOP; else p2OpBuffer += currentOP;
-                currentOP = 0;
-            }
-            // Handling card/hand manipulation effects requires complex user choice/AI logic and is skipped for brevity
-        }
-        
-        // --- 6. DOMINATION AND CRISIS ---
-
-        function checkDomination(zoneIndex) {
-            const zone = currentBoard[zoneIndex];
-            const diff = zone.p1 - zone.p2;
-            
-            const oldDom = zone.dominated;
-
-            if (diff >= 2) {
-                zone.dominated = 1;
-            } else if (diff <= -2) {
-                zone.dominated = -1;
-            } else {
-                zone.dominated = 0;
-            }
-
-            // P2 '대중 봉기' (빈민 ID: 5) - 장악 즉시 효과
-            if (zone.id === 5 && zone.dominated === -1 && oldDom !== -1) {
-                 log("P2 [대중 봉기] 발동! 인접 구역에 큐브 2개 배치.", 'event');
-                 for (const connIndex of zone.connections) {
-                    currentBoard[connIndex].p2 += 2;
-                    checkDomination(connIndex);
+            // Try Deploy (Cost 1)
+            if (!actionDone && state.currentOP >= 1) {
+                const deployTargets = state.board.filter(z => canDeploy(z.id, -1));
+                if (deployTargets.length > 0) {
+                    // Greedy target: most P1, not P2 dominated
+                    const z = deployTargets.sort((a,b) => b.p1 - a.p1)[0]; 
+                    z.p2++;
+                    state.currentOP--;
+                    checkDomination(z);
+                    log(`AI: ${z.name} 배치`, 'p2');
+                    actionDone = true;
                 }
             }
-        }
-
-        function checkCrisis() {
-            if (crisis >= 5) {
-                alert(`위기 수치 5 도달! ${currentPlayer === 1 ? '집정관(P1)' : '선동가(P2)'} 패배! 상대방 승리!`);
-                initGame(); // Restart or handle game over
-                return true;
-            }
-            return false;
-        }
-        
-        // --- 7. AI LOGIC (MINIMAX IMPLEMENTATION) ---
-
-        // Evaluation Function: Scores the state from P2's perspective
-        function evaluate(boardState, currentStability) {
-            let score = -currentStability * 5; // Stability: +10 is P1 win, P2 wants -10. Scale factor 5.
-            let p2Domination = 0;
-            let p1Domination = 0;
             
-            boardState.forEach(zone => {
-                const dominationDiff = zone.p2 - zone.p1;
-                // Weighted Influence Score: 
-                score += dominationDiff * zone.opValue; 
-
-                if (zone.dominated === -1) p2Domination += 1;
-                if (zone.dominated === 1) p1Domination += 1;
-            });
-            
-            // Domination Bonus
-            score += (p2Domination * 10);
-            score -= (p1Domination * 10);
-
-            // Crisis Penalty (P2 wants to avoid high crisis)
-            score -= crisis * 5; 
-            
-            return score;
-        }
-
-        function aiTurn() {
-            // Placeholder: Simple P2 AI (Depth 2 Minimax)
-            // AI goal: Find the move (Card Use + OP Actions) that maximizes P2's score.
-            
-            log("AI 턴 시작 (Minimax D=2 계산 중...)", 'ai');
-            
-            // Simulating 4 actions
-            for (let actionCount = 0; actionCount < 4; actionCount++) {
-                if (p2Hand.length === 0) break;
-                
-                let bestScore = -Infinity;
-                let bestCardIndex = -1;
-                let bestActionSequence = []; // Placeholder for complex action sequence
-
-                // 1. Find Best Card Use (OP or Event)
-                p2Hand.forEach((card, index) => {
-                    // --- Simulate Card Use (OP vs Event) ---
-                    
-                    // Option A: Use as OP
-                    // Simplified: We only check the immediate resulting state after OP gain.
-                    const scoreAsOP = simulateCardUse(index, -1, 'op');
-
-                    // Option B: Use as Event (if possible)
-                    let scoreAsEvent = -Infinity;
-                    if (card.type === 'P2' || card.type === 'N') {
-                        scoreAsEvent = simulateCardUse(index, -1, 'event');
-                    }
-
-                    let currentBestScore = Math.max(scoreAsOP, scoreAsEvent);
-                    
-                    if (currentBestScore > bestScore) {
-                        bestScore = currentBestScore;
-                        bestCardIndex = index;
-                        // Need complex logic here to store the best OP actions that followed.
-                    }
-                });
-                
-                // --- EXECUTE BEST MOVE (Simplified Execution) ---
-                if (bestCardIndex !== -1) {
-                    const card = p2Hand[bestCardIndex];
-                    // Simple Rule: If Event is far better than OP, use Event. Otherwise, use OP.
-                    const isEventBetter = (card.type === 'P2' || card.type === 'N') && (simulateCardUse(bestCardIndex, -1, 'event') > simulateCardUse(bestCardIndex, -1, 'op') + 5); 
-                    
-                    if (isEventBetter) {
-                        useCardAsEvent(bestCardIndex); // Reusing P1's function structure
-                    } else {
-                        // Use as OP
-                        const cardOp = card.op;
-                        useCardAsOP(bestCardIndex);
-
-                        // --- Simplified OP Action Execution ---
-                        let opLeft = currentOP;
-                        const p2RemoveCost = getRemoveCost(-1);
-                        
-                        // Prioritize Removing Opponent's Cubes in High-Value Zones
-                        const targetZone = currentBoard.find(z => z.p1 > 0 && opLeft >= p2RemoveCost && z.id !== 6); // Cannot remove '공업'
-                        if (targetZone) {
-                            opLeft -= p2RemoveCost;
-                            targetZone.p1 -= 1;
-                            log(`AI: [제거] 작전 실행, ${targetZone.name}에서 P1 큐브 제거.`, 'ai');
-                            checkDomination(targetZone.pos);
+            // Fallback: Move (Cost 1) - Very simple move logic
+            if (!actionDone && state.currentOP >= 1) {
+                for(let i=0; i<state.board.length; i++) {
+                    if(state.board[i].p2 > 0) {
+                        for(let adj of state.board[i].adj) {
+                            if(state.board[adj].dom !== -1) { // Move to non-dominated area
+                                state.board[i].p2--;
+                                state.board[adj].p2++;
+                                state.currentOP--;
+                                checkDomination(state.board[i]);
+                                checkDomination(state.board[adj]);
+                                log(`AI: ${state.board[i].name} -> ${state.board[adj].name} 이동`, 'p2');
+                                actionDone = true;
+                                break;
+                            }
                         }
-                        
-                        // Deploy to the most contested, high-value zone
-                        const deployTarget = currentBoard.reduce((best, current) => {
-                            const diff = current.p2 - current.p1;
-                            // Prioritize high value zones where P2 is slightly behind or contested
-                            if (current.opValue > best.opValue && diff < 2) return current;
-                            return best;
-                        }, currentBoard[0]);
-                        
-                        let deployCount = Math.min(opLeft, 4);
-                        if (deployCount > 0) {
-                            deployTarget.p2 += deployCount;
-                            opLeft -= deployCount;
-                            log(`AI: [배치] 작전 실행, ${deployTarget.name}에 ${deployCount} 큐브 배치.`, 'ai');
-                            checkDomination(deployTarget.pos);
-                        }
-                        
-                        currentOP = opLeft; // Remaining OP is consumed/left to 0
                     }
+                    if(actionDone) break;
                 }
             }
-
-            // 2. End Turn
-            if (p2Hand.length === 1) {
-                discardPile.push(p2Hand.pop());
-                log("AI: 히든 카드 선택 및 버림.", 'ai');
-            }
             
-            currentOP = 0;
-            currentPlayer = 1;
-            actionsLeft = 4;
-            
-            endPlayerTurn();
-        }
-
-        // Simplified card simulation for Minimax
-        function simulateCardUse(cardIndex, player, actionType) {
-            // This is where the recursive call for D=2/3 would go.
-            // For simplicity: We return the immediate 'evaluate' score after the card is used and OP is gained.
-            const card = getPlayerHand()[cardIndex];
-            let tempBoard = JSON.parse(JSON.stringify(currentBoard));
-            let tempStability = stability;
-            let tempCrisis = crisis;
-            
-            // --- Logic to apply card effect and OP on tempBoard ---
-            
-            // If OP:
-            if (actionType === 'op') {
-                let opGain = card.op;
-                
-                // If Forced Event:
-                if (card.type !== (player === 1 ? 'P1' : 'P2') && card.type !== 'N') {
-                    // Simulate Forced Event effect on tempBoard/tempStability
-                    tempCrisis += card.crisis; 
-                    // ... (Complex state change simulation needed here)
-
-                }
-                
-                // Simulate OP action (e.g., place opGain cubes in the highest value zone)
-                const targetZone = tempBoard.reduce((best, current) => {
-                    if (current.opValue > best.opValue) return current;
-                    return best;
-                }, tempBoard[0]);
-                
-                if (player === 1) targetZone.p1 += opGain;
-                else targetZone.p2 += opGain;
-                
-            } 
-            // If Event:
-            else if (actionType === 'event') {
-                 // Simulate Event effect on tempBoard/tempStability
-                 tempCrisis += card.crisis;
-                 // ... (Complex state change simulation needed here)
-            }
-            
-            // Re-check domination after state change
-            // tempBoard.forEach((z, i) => checkDomination(i, tempBoard)); // Needs complex board check logic
-            
-            // --- Evaluation ---
-            return evaluate(tempBoard, tempStability);
-        }
-
-        function endPlayerTurn() {
-            // Check for immediate win/loss conditions
-            if (checkCrisis()) return;
-
-            // Round End Calculation if P1 was the last player (Actions = 0)
-            if (actionsLeft === 0 && currentPlayer === -1) {
-                roundEndCalculation();
-            } else if (currentPlayer === 1) {
-                // Next turn is P2
-                currentPlayer = -1;
-                actionsLeft = 4;
-                currentOP = 0;
-                updateUI();
-                setTimeout(aiTurn, 500);
-            }
-        }
-        
-        function roundEndCalculation() {
-             // 1. Stability Check
-            let p1Score = 0;
-            let p2Score = 0;
-            
-            currentBoard.forEach(zone => {
-                if (zone.dominated === 1) p1Score += zone.opValue;
-                if (zone.dominated === -1) p2Score += zone.opValue;
-            });
-            
-            stability += (p1Score - p2Score);
-            
-            log(`--- 라운드 ${currentRound} 결산 --- 안정도 이동: ${p1Score - p2Score}`, 'round');
-
-            if (stability >= 10 || stability <= -10) {
-                alert(stability > 0 ? "집정관 승리!" : "선동가 승리!");
-            } else {
-                currentRound++;
-                startRound();
-            }
-        }
-        
-        // --- Event Listeners and Final Init ---
-        // (OP Action button handlers omitted for brevity, but they should call endOpActionCheck)
-        document.getElementById('op-deploy-btn').onclick = () => { /* ... simplified deploy */ };
-        document.getElementById('op-remove-btn').onclick = () => { /* ... simplified remove */ };
-        document.getElementById('op-move-btn').onclick = () => { alert("이동 작전은 구현되지 않았습니다."); };
-        document.getElementById('op-reorganize-btn').onclick = () => { 
-            if (currentOP >= 2) { 
-                currentOP -= 2; 
-                crisis = Math.max(0, crisis - 1); 
-                log("[재정비] 작전 실행: 위기 수치 -1.", 'event'); 
-                endOpActionCheck(); 
-            }
-        };
-
-        document.getElementById('end-turn-btn').onclick = () => {
-            if (actionsLeft === 0 && p1Hand.length === 1) {
-                discardPile.push(p1Hand.pop());
-                log("P1: 히든 카드 선택 및 버림.", 'general');
-            }
-            // Transition to P2's turn
-            currentOP = 0;
-            currentPlayer = -1;
-            actionsLeft = 4;
-            updateUI();
-            setTimeout(aiTurn, 500); 
-        };
-
-        // --- Final initialization ---
-        initGame();
-        
-        function updateUI() {
-            // 1. Update Indicators
-            document.getElementById('round-indicator').innerText = currentRound;
-            document.getElementById('stability-value').innerText = stability;
-            document.getElementById('crisis-value').innerText = crisis;
-            document.getElementById('crisis-bar-fill').style.width = `${(crisis / 5) * 100}%`;
-            
-            const marker = document.getElementById('stability-marker');
-            const stabilityPercent = 50 + (stability * 5); // -10 to 10 maps to 0% to 100%
-            marker.style.marginLeft = `${stabilityPercent}%`;
-
-            document.getElementById('turn-indicator').innerText = currentPlayer === 1 ? "집정관 (P1)" : "선동가 (P2) (AI)";
-            document.getElementById('turn-indicator').style.color = currentPlayer === 1 ? "var(--p1-color)" : "var(--p2-color)";
-            document.getElementById('actions-left').innerText = actionsLeft;
-            document.getElementById('current-op').innerText = currentOP;
-
-            // 2. Update Zones (MAP RENDER)
-            const mapContainer = document.getElementById('map-container');
-            mapContainer.innerHTML = '';
-            currentBoard.forEach((zone, index) => {
-                const zoneEl = document.createElement('div');
-                zoneEl.className = `zone ${zone.dominated === 1 ? 'dominated-1' : zone.dominated === -1 ? 'dominated--1' : ''}`;
-                zoneEl.id = `zone-${zone.id}`;
-                
-                // Simplified positioning (using grid areas)
-                zoneEl.style.gridArea = `${Math.floor(index / 3) + 1} / ${(index % 3) + 1}`; 
-                
-                zoneEl.innerHTML = `
-                    <div class="zone-title">${zone.name} (${zone.opValue}x)</div>
-                    <div class="cube-count">
-                        <span class="p1-cubes">${zone.p1}</span> : 
-                        <span class="p2-cubes">${zone.p2}</span>
-                    </div>
-                    ${zone.dominated !== 0 ? `<div class="active-effect">${zone.dominated === 1 ? 'P1' : 'P2'} ⚡</div>` : ''}
-                    <div class="zone-info">ID: ${zone.id}</div>
-                `;
-                // Attach click handler for OP actions
-                zoneEl.onclick = () => handleZoneClick(index); 
-                mapContainer.appendChild(zoneEl);
-            });
-
-            // 3. Update Hand (CARD RENDER)
-            const handContainer = document.getElementById('hand-container');
-            handContainer.innerHTML = '';
-            const currentHand = getPlayerHand();
-
-            currentHand.forEach((card, index) => {
-                const cardEl = document.createElement('div');
-                cardEl.className = `card ${card.type === 'P1' ? 'p1-card' : card.type === 'P2' ? 'p2-card' : 'neutral-card'}`;
-                if (index === selectedCardIndex) cardEl.style.border = '4px solid white';
-
-                const cardType = card.type === 'P1' ? '집정관' : card.type === 'P2' ? '선동가' : '중립';
-                const crisisDisplay = card.crisis > 0 ? `🔥${card.crisis}` : '';
-                
-                cardEl.innerHTML = `
-                    <div class="card-header">
-                        <span>${card.name}</span>
-                        <span class="card-op">OP ${card.op} ${crisisDisplay}</span>
-                    </div>
-                    <div class="card-event">${card.event}</div>
-                    <div class="card-type">${cardType}</div>
-                `;
-                cardEl.onclick = () => handleCardSelection(index);
-                handContainer.appendChild(cardEl);
-            });
-            
-            // 4. Update Action Buttons
-            updateActionButtons();
-        }
-
-        // --- 5. EVENT LISTENERS AND FINAL INIT ---
-        // 맵 클릭 이벤트 리스너를 이 함수로 대체합니다. (중복 방지)
-        function handleZoneClick(zoneIndex) {
-            if (currentPlayer !== 1) return;
-            
-            const zone = currentBoard[zoneIndex];
-
-            if (phase === 'target_selection_deploy') {
-                if (currentOP >= 1) {
-                    zone.p1 += 1;
-                    currentOP -= 1;
-                    log(`[배치] 작전 실행, ${zone.name}에 P1 큐브 배치.`, 'general');
-                    checkDomination(zoneIndex);
-                    phase = 'op_action'; 
-                    endOpActionCheck();
-                }
-            } else if (phase === 'target_selection_remove') {
-                const cost = getRemoveCost(1);
-                if (zone.p2 > 0 && zone.id !== 6 && currentOP >= cost) { // ID 6 (공업)은 확정 장악 시 제거 불가
-                    zone.p2 -= 1;
-                    currentOP -= cost;
-                    log(`[제거] 작전 실행, ${zone.name}에서 P2 큐브 제거.`, 'general');
-                    checkDomination(zoneIndex);
-                    phase = 'op_action';
-                    endOpActionCheck();
-                } else {
-                    alert("제거할 수 없는 구역이거나 OP가 부족합니다.");
-                }
-            }
-        }
-
-        function updateActionButtons() {
-            // Update button states based on currentOP and phase
-            const opActive = currentOP > 0;
-            const removeCost = getRemoveCost(currentPlayer);
-            
-            document.getElementById('op-deploy-btn').disabled = !opActive || currentOP < 1;
-            document.getElementById('op-remove-btn').disabled = !opActive || currentOP < removeCost;
-            document.getElementById('op-move-btn').disabled = !opActive || currentOP < 1;
-            document.getElementById('op-reorganize-btn').disabled = !opActive || currentOP < 2;
-            
-            document.getElementById('end-turn-btn').disabled = actionsLeft > 0;
-        }
-
-        function endOpActionCheck() {
-            if (currentOP <= 0) {
-                phase = actionsLeft > 0 ? 'card_selection' : 'end_turn';
-            }
+            if(!actionDone) state.currentOP = 0; 
             updateUI();
         }
+        
+        // 3. Pass turn back to P1
+        state.turnPlayer = 1;
+        state.currentOP = 0; // Ensure OP is cleared
+        endRoundPhase(); // Logic handles if P1 turn or end round
+    }, 1000);
+}
 
-        // --- Simplified Zone Click Handler for P1 OP Actions ---
-        document.getElementById('map-container').addEventListener('click', (event) => {
-            if (currentPlayer !== 1) return;
-            let targetEl = event.target.closest('.zone');
-            if (!targetEl) return;
-            
-            const zoneId = parseInt(targetEl.id.split('-')[1]);
-            const zoneIndex = GAME_DATA.ZONES.findIndex(z => z.id === zoneId);
-            const zone = currentBoard[zoneIndex];
+function log(msg, type) {
+    const el = document.getElementById('log-area');
+    const color = type === 'p1' ? 'var(--p1-color)' : type === 'p2' ? 'var(--p2-color)' : type === 'warn' ? '#ff0' : 'var(--neutral-color)';
+    el.innerHTML = `<div style="color:${color}">> ${msg}</div>` + el.innerHTML;
+    if (el.scrollHeight > el.clientHeight) el.scrollTop = 0; // Scroll to top
+}
 
-            if (phase === 'target_selection_deploy') {
-                if (currentOP >= 1) {
-                    zone.p1 += 1;
-                    currentOP -= 1;
-                    log(`[배치] 작전 실행, ${zone.name}에 P1 큐브 배치.`, 'general');
-                    checkDomination(zoneIndex);
-                    phase = 'op_action'; 
-                    endOpActionCheck();
-                }
-            } else if (phase === 'target_selection_remove') {
-                const cost = getRemoveCost(1);
-                if (zone.p2 > 0 && zone.id !== 6 && currentOP >= cost) { // ID 6 (공업)은 확정 장악 시 제거 불가
-                    zone.p2 -= 1;
-                    currentOP -= cost;
-                    log(`[제거] 작전 실행, ${zone.name}에서 P2 큐브 제거.`, 'general');
-                    checkDomination(zoneIndex);
-                    phase = 'op_action';
-                    endOpActionCheck();
-                } else {
-                    alert("제거할 수 없는 구역이거나 OP가 부족합니다.");
-                }
-            }
-        });
-    </script>
+/** * --- TUTORIAL (Skipped for brevity, same as previous) --- 
+ */
+const tutorials = [
+    { t: "1. 게임 목표", c: "당신은 <b>집정관(파랑)</b>입니다. 도시의 [안정도]를 높여(+10) 체제를 수호하세요.<br>AI인 <b>선동가(빨강)</b>는 혼란을 일으켜 안정도를 낮추려(-10) 합니다. 승패는 ±10 또는 6라운드 종료 시 결정됩니다." },
+    { t: "2. 맵과 장악", c: "각 구역에 큐브를 배치해 영향력을 행사합니다. 상대보다 큐브가 2개 더 많으면 <b>[장악]</b> 상태가 되어 특수 능력이 발동되고, 라운드 끝에 안정도 점수(OP Value)를 얻습니다." },
+    { t: "3. 딜레마 (카드 사용)", c: "카드는 [작전(OP)]과 [이벤트]로 나뉩니다. 중립(노랑) 카드와 내 진영(파랑) 카드는 이벤트로 자유롭게 쓸 수 있습니다.<br>중요: <b>상대방 진영(빨강)의 카드</b>를 작전용(OP)으로 쓰면, <b>상대의 이벤트가 강제로 발동</b>됩니다!" },
+    { t: "4. 위기 수치", c: "강력한 카드(🔥 아이콘)를 이벤트로 사용하거나 상대 카드에 딜레마가 발생하면 [위기]가 높아집니다.<br>위기가 5에 도달하면 그 즉시 <b>패배</b>합니다. [재정비] 작전(2 OP)으로 위기를 낮추세요." },
+    { t: "5. 작전 종류", c: "<b>배치(1)</b>: 인접 구역에 큐브 놓기<br><b>제거(2)</b>: 적 큐브 없애기<br><b>이동(1)</b>: 내 큐브 이동<br><b>재정비(2)</b>: 위기 -1" }
+];
+let tutPage = 0;
+
+function openTutorial() {
+    document.getElementById('modal-overlay').style.display = 'flex';
+    showTutPage(0);
+}
+function closeModal() {
+    document.getElementById('modal-overlay').style.display = 'none';
+}
+function showTutPage(idx) {
+    tutPage = idx;
+    document.getElementById('tut-title').innerText = tutorials[idx].t;
+    document.getElementById('tut-content').innerHTML = tutorials[idx].c;
+    document.getElementById('tut-page').innerText = `${idx+1} / ${tutorials.length}`;
+}
+function nextTut() { if(tutPage < tutorials.length -1) showTutPage(tutPage+1); }
+function prevTut() { if(tutPage > 0) showTutPage(tutPage-1); }
+
+// Start
+init();
+
+</script>
 </body>
 </html>
