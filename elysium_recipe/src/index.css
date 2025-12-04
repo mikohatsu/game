@@ -968,10 +968,12 @@ input:focus, select:focus, button:focus {
 
 /* 판매 팝업 스타일 */
 .sell-popup {
-  position: fixed;
+  position: absolute;
   z-index: 2000;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   animation: sellPopupAppear 0.2s ease-out;
-  transform: translate(-50%, -100%);
   pointer-events: none;
 }
 

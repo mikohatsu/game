@@ -20,7 +20,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
     const rect = cardRef.current.getBoundingClientRect();
     return {
       x: rect.left + (rect.width / 2),
-      y: Math.max(rect.top, 12) + (rect.height / 2)
+      y: rect.top + (rect.height / 2)
     };
   }, []);
 
@@ -78,7 +78,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
   };
 
   return (
-    <>
+    <div className="item-card-wrapper">
       <div
         ref={cardRef}
         className={`item-card ${canSell ? 'item-sellable' : ''}`}
@@ -123,13 +123,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
 
       {/* 판매 팝업 */}
       {showSellPopup && popupPosition && (
-        <div
-          className="sell-popup"
-          style={{
-            left: `${popupPosition.x}px`,
-            top: `${popupPosition.y}px`
-          }}
-        >
+        <div className="sell-popup">
           <div className="sell-popup-content">
             <div className="sell-popup-title">
               {item.icon} {item.name}
