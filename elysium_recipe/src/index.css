@@ -768,8 +768,8 @@ input:focus, select:focus, button:focus {
 /* 인벤토리 래퍼 - 스크롤 담당 */
 .inventory-wrapper {
   max-height: 24rem; /* 96 * 0.25rem = 24rem */
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow-y: visible;
+  overflow-x: visible;
 }
 
 /* 인벤토리 그리드 스타일 */

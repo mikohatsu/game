@@ -15,6 +15,15 @@ export function ItemCard({ item, count, onSell, canSell }) {
     };
   }, []);
 
+  const getPopupAnchor = useCallback(() => {
+    if (!cardRef.current) return null;
+    const rect = cardRef.current.getBoundingClientRect();
+    return {
+      x: rect.left + (rect.width / 2),
+      y: Math.max(rect.top, 12) + (rect.height / 2)
+    };
+  }, []);
+
   const handleMouseEnter = () => {
     setShowTooltip(true);
   };
@@ -26,7 +35,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
   const handleClick = (e) => {
     if (canSell && onSell) {
       e.stopPropagation();
-      const anchor = getAnchorPosition();
+      const anchor = getPopupAnchor();
       setPopupPosition(anchor || { x: e.clientX, y: e.clientY });
       setShowSellPopup((prev) => !prev);
     }
@@ -47,7 +56,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
     if (!showSellPopup) return;
 
     const handleReposition = () => {
-      const anchor = getAnchorPosition();
+      const anchor = getPopupAnchor();
       if (anchor) setPopupPosition(anchor);
     };
 
@@ -60,7 +69,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
       window.removeEventListener('scroll', handleReposition, true);
       window.removeEventListener('resize', handleReposition);
     };
-  }, [getAnchorPosition, showSellPopup]);
+  }, [getPopupAnchor, showSellPopup]);
 
   // 판매 단가 (tier 기반)
   const getSellPrice = () => {
