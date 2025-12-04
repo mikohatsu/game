@@ -874,7 +874,9 @@ input:focus, select:focus, button:focus {
 
 /* 툴팁 스타일 */
 .item-tooltip {
-  position: fixed;
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
   transform: translateX(-50%);
   background: linear-gradient(135deg, var(--color-sand-darker) 0%, var(--color-sand-darkest) 100%);
   border: 2px solid var(--color-bronze);
