@@ -105,7 +105,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
           className="item-tooltip"
           style={{
             left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`
+            top: `${tooltipPosition.y - 12}px`
           }}
         >
           <div className="tooltip-header">
