@@ -874,10 +874,8 @@ input:focus, select:focus, button:focus {
 
 /* 툴팁 스타일 */
 .item-tooltip {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%) translateY(-8px);
+  position: fixed;
+  transform: translate(-50%, -100%) translateY(-12px);
   background: linear-gradient(135deg, var(--color-sand-darker) 0%, var(--color-sand-darkest) 100%);
   border: 2px solid var(--color-bronze);
   border-radius: 8px;
@@ -908,11 +906,11 @@ input:focus, select:focus, button:focus {
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-4px);
+    transform: translate(-50%, -100%) translateY(-4px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(-8px);
+    transform: translate(-50%, -100%) translateY(-12px);
   }
 }
 
