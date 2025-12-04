@@ -142,6 +142,6 @@ export function ItemCard({ item, count, onSell, canSell }) {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
