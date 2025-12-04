@@ -6,6 +6,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
   const [tooltipPosition, setTooltipPosition] = useState(null);
   const [popupPosition, setPopupPosition] = useState(null);
   const cardRef = useRef(null);
+  const tooltipRef = useRef(null);
 
   const getAnchorPosition = useCallback(() => {
     if (!cardRef.current) return null;
@@ -17,10 +18,6 @@ export function ItemCard({ item, count, onSell, canSell }) {
   }, []);
 
   const handleMouseEnter = () => {
-    const anchor = getAnchorPosition();
-    if (anchor) {
-      setTooltipPosition(anchor);
-    }
     setShowTooltip(true);
   };
 
@@ -48,20 +45,32 @@ export function ItemCard({ item, count, onSell, canSell }) {
     setShowSellPopup(false);
   };
 
+  const positionTooltip = useCallback(() => {
+    const anchor = getAnchorPosition();
+    if (!anchor) return;
+    const tooltipHeight = tooltipRef.current?.getBoundingClientRect().height || 0;
+    setTooltipPosition({
+      x: anchor.x,
+      y: anchor.y - tooltipHeight - 8
+    });
+  }, [getAnchorPosition]);
+
   useEffect(() => {
     if (!showTooltip && !showSellPopup) return;
 
     const handleReposition = () => {
-      const anchor = getAnchorPosition();
-      if (!anchor) return;
-
       if (showTooltip) {
-        setTooltipPosition(anchor);
+        positionTooltip();
       }
       if (showSellPopup) {
-        setPopupPosition(anchor);
+        const anchor = getAnchorPosition();
+        if (anchor) setPopupPosition(anchor);
       }
     };
+
+    if (showTooltip) {
+      requestAnimationFrame(positionTooltip);
+    }
 
     window.addEventListener('scroll', handleReposition, true);
     window.addEventListener('resize', handleReposition);
@@ -70,7 +79,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
       window.removeEventListener('scroll', handleReposition, true);
       window.removeEventListener('resize', handleReposition);
     };
-  }, [getAnchorPosition, showTooltip, showSellPopup]);
+  }, [getAnchorPosition, positionTooltip, showTooltip, showSellPopup]);
 
   // 판매 단가 (tier 기반)
   const getSellPrice = () => {
@@ -102,10 +111,11 @@ export function ItemCard({ item, count, onSell, canSell }) {
       {/* 툴팁 (고정 좌표 absolute positioning) */}
       {showTooltip && tooltipPosition && (
         <div
+          ref={tooltipRef}
           className="item-tooltip"
           style={{
             left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y - 12}px`
+            top: `${tooltipPosition.y}px`
           }}
         >
           <div className="tooltip-header">
