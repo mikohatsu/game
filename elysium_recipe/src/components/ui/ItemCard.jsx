@@ -72,7 +72,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
     };
   }, [getAnchorPosition, showTooltip, showSellPopup]);
 
-  // ?愲Г 臧€瓴?瓿勳偘 (tier???半澕)
+  // 판매 단가 (tier 기반)
   const getSellPrice = () => {
     if (!item.tier) return 0;
     return item.tier * 10;
@@ -91,70 +91,70 @@ export function ItemCard({ item, count, onSell, canSell }) {
         <div className="item-name">{item.name}</div>
         <div className="item-count">x{count}</div>
 
-        {/* ?愲Г 臧€???滌嫓 */}
+        {/* 판매 가능 뱃지 */}
         {canSell && (
           <div className="sell-badge">
-            ?挵
-          </div>
-        )}
-
-        {/* ?错寔 (旃措摐 ?措???absolute positioning) */}
-        {showTooltip && tooltipPosition && (
-          <div
-            className="item-tooltip"
-            style={{
-              left: `${tooltipPosition.x}px`,
-              top: `${tooltipPosition.y}px`
-            }}
-          >
-            <div className="tooltip-header">
-              <span className="tooltip-icon">{item.icon}</span>
-              <span className="tooltip-title">{item.name}</span>
-            </div>
-            <div className="tooltip-divider"></div>
-            <div className="tooltip-description">{item.description}</div>
-            {item.tier && (
-              <div className="tooltip-tier">?办柎: {item.tier}</div>
-            )}
-            {canSell && (
-              <>
-                <div className="tooltip-divider"></div>
-                <div className="tooltip-sell-price">
-                  ?挵 ?愲Г 臧€瓴? {getSellPrice()}G
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ?愲Г ?濎梾 */}
-        {showSellPopup && popupPosition && (
-          <div
-            className="sell-popup"
-            style={{
-              left: `${popupPosition.x}px`,
-              top: `${popupPosition.y}px`
-            }}
-          >
-            <div className="sell-popup-content">
-              <div className="sell-popup-title">
-                {item.icon} {item.name}
-              </div>
-              <div className="sell-popup-price">
-                ?挵 {getSellPrice()}G
-              </div>
-              <div className="sell-popup-buttons">
-                <button onClick={handleSell} className="btn-sell">
-                  ?愲Г
-                </button>
-                <button onClick={handleCancel} className="btn-cancel">
-                  旆唽
-                </button>
-              </div>
-            </div>
+            판매
           </div>
         )}
       </div>
+
+      {/* 툴팁 (고정 좌표 absolute positioning) */}
+      {showTooltip && tooltipPosition && (
+        <div
+          className="item-tooltip"
+          style={{
+            left: `${tooltipPosition.x}px`,
+            top: `${tooltipPosition.y}px`
+          }}
+        >
+          <div className="tooltip-header">
+            <span className="tooltip-icon">{item.icon}</span>
+            <span className="tooltip-title">{item.name}</span>
+          </div>
+          <div className="tooltip-divider"></div>
+          <div className="tooltip-description">{item.description}</div>
+          {item.tier && (
+            <div className="tooltip-tier">티어: {item.tier}</div>
+          )}
+          {canSell && (
+            <>
+              <div className="tooltip-divider"></div>
+              <div className="tooltip-sell-price">
+                판매 단가 {getSellPrice()}G
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 판매 팝업 */}
+      {showSellPopup && popupPosition && (
+        <div
+          className="sell-popup"
+          style={{
+            left: `${popupPosition.x}px`,
+            top: `${popupPosition.y}px`
+          }}
+        >
+          <div className="sell-popup-content">
+            <div className="sell-popup-title">
+              {item.icon} {item.name}
+            </div>
+            <div className="sell-popup-price">
+              판매 {getSellPrice()}G
+            </div>
+            <div className="sell-popup-buttons">
+              <button onClick={handleSell} className="btn-sell">
+                판매
+              </button>
+              <button onClick={handleCancel} className="btn-cancel">
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
