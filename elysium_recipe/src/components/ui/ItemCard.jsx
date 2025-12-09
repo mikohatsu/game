@@ -12,7 +12,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
     const rect = cardRef.current.getBoundingClientRect();
     return {
       x: rect.left + (rect.width / 2),
-      y: Math.max(rect.top - 8, 12)
+      y: rect.top
     };
   }, []);
 
@@ -127,7 +127,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
           className="item-tooltip floating-tooltip"
           style={{
             left: tooltipPosition.x,
-            top: tooltipPosition.y
+            top: tooltipPosition.y - 12
           }}
         >
           <div className="tooltip-header">

@@ -8,7 +8,7 @@ export function RecipeDetail({ recipe }) {
   };
 
   return (
-    <div className="p-4 bg-purple-500/20 border border-purple-500 rounded space-y-3">
+    <div className="relic-panel space-y-3">
       <div className="flex items-center gap-3">
         <span className="text-4xl">{recipe.icon}</span>
         <div>
@@ -17,13 +17,15 @@ export function RecipeDetail({ recipe }) {
         </div>
       </div>
 
+      <div className="relic-divider" />
+
       <div>
         <strong>재료:</strong> {recipe.ingredients.map(getIngredientName).join(' + ')}
       </div>
 
       <div>
         <strong>단서:</strong>
-        <div className="mt-2 p-3 bg-gray-900/50 rounded text-sm space-y-1">
+        <div className="mt-2 p-3 bg-gray-900/50 rounded text-sm space-y-1 border border-gray-700/80">
           {recipe.clues.map((clue, i) => (
             <p key={i} className="italic">{clue}</p>
           ))}

@@ -11,10 +11,16 @@ export function Archive({ gameState, onExploration, selectedRecipe, onSelectReci
 
   return (
     <div className="game-card">
-      <h2 className="text-xl font-bold mb-4">📚 고대 도서관</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold">📚 고대 도서관</h2>
+          <p className="text-xs text-gray-400">풍화된 서판 사이, 비밀 실험 노트가 낮은 톤으로 속삭입니다.</p>
+        </div>
+        <span className="relic-note">탐사 → 단서 → 상세</span>
+      </div>
       <div className="space-y-4">
         {/* 탐사 인터페이스 */}
-        <div className="p-4 bg-gray-800/50 rounded">
+        <div className="relic-panel">
           <p className="mb-3">새로운 레시피의 단서를 찾기 위해 도서관을 탐색합니다.</p>
           <p className="text-sm text-gray-400 mb-3">
             • 현재 주차: {gameState.week}주차 (Tier {currentTier} 레시피 발견 가능)

@@ -8,14 +8,20 @@ export function Grimoire({ gameState, onLoadParams }) {
 
   return (
     <div className="game-card">
-      <h2 className="text-xl font-bold mb-4">📖 연금술 비망록</h2>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-xl font-bold">📖 연금술 비망록</h2>
+          <p className="text-xs text-gray-400">성공한 조합을 석판 위에 새기고, 다시 불러옵니다.</p>
+        </div>
+        <span className="relic-note">Click = 설정 로드</span>
+      </div>
       <div className="space-y-3">
         {grimoireEntries.map(entry => {
           const recipe = getRecipeById(entry.recipeId);
           if (!recipe) return null;
 
           return (
-            <div key={entry.recipeId} className="p-4 bg-gray-700/50 rounded">
+            <div key={entry.recipeId} className="relic-panel">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-3">
                   <span className="text-3xl">{recipe.icon}</span>
@@ -28,6 +34,7 @@ export function Grimoire({ gameState, onLoadParams }) {
                   {entry.bestGrade}
                 </div>
               </div>
+              <div className="relic-divider" />
 
               <div className="grid grid-cols-3 gap-2 text-sm">
                 <div>
