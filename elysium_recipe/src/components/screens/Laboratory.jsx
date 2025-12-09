@@ -193,7 +193,17 @@ export function Laboratory({
 
       {/* 인벤토리 */}
       <div className="game-card">
-        <h2 className="text-xl font-bold mb-4">📦 인벤토리</h2>
+        <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+          <div>
+            <h2 className="text-xl font-bold">📦 인벤토리</h2>
+            <p className="text-xs mt-1" style={{ color: 'var(--color-parchment-dark)', letterSpacing: '0.5px' }}>
+              풍화된 선반 위에 놓인 유물 상자, 재료에 잠시 숨을 불어넣어 보세요.
+            </p>
+          </div>
+          <span className="text-[11px] uppercase tracking-[2px]" style={{ color: 'var(--color-bronze-light)' }}>
+            Hover = 상세 / Click = 판매
+          </span>
+        </div>
         <div className="inventory-wrapper">
           <div className="inventory-grid">
             {inventoryItems.map(({ id, count, item }) => {

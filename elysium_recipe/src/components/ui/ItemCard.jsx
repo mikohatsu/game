@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function ItemCard({ item, count, onSell, canSell }) {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState(null);
   const [showSellPopup, setShowSellPopup] = useState(false);
   const [popupPosition, setPopupPosition] = useState(null);
   const cardRef = useRef(null);
@@ -11,7 +12,7 @@ export function ItemCard({ item, count, onSell, canSell }) {
     const rect = cardRef.current.getBoundingClientRect();
     return {
       x: rect.left + (rect.width / 2),
-      y: Math.max(rect.top, 12)
+      y: Math.max(rect.top - 8, 12)
     };
   }, []);
 
@@ -26,10 +27,13 @@ export function ItemCard({ item, count, onSell, canSell }) {
 
   const handleMouseEnter = () => {
     setShowTooltip(true);
+    const anchor = getAnchorPosition();
+    if (anchor) setTooltipPosition(anchor);
   };
 
   const handleMouseLeave = () => {
     setShowTooltip(false);
+    setTooltipPosition(null);
   };
 
   const handleClick = (e) => {
@@ -51,6 +55,25 @@ export function ItemCard({ item, count, onSell, canSell }) {
     e.stopPropagation();
     setShowSellPopup(false);
   };
+
+  useEffect(() => {
+    if (!showTooltip) return;
+
+    const handleReposition = () => {
+      const anchor = getAnchorPosition();
+      if (anchor) setTooltipPosition(anchor);
+    };
+
+    handleReposition();
+
+    window.addEventListener('scroll', handleReposition, true);
+    window.addEventListener('resize', handleReposition);
+
+    return () => {
+      window.removeEventListener('scroll', handleReposition, true);
+      window.removeEventListener('resize', handleReposition);
+    };
+  }, [getAnchorPosition, showTooltip]);
 
   useEffect(() => {
     if (!showSellPopup) return;
@@ -98,9 +121,15 @@ export function ItemCard({ item, count, onSell, canSell }) {
         )}
       </div>
 
-      {/* 툴팁 (고정 좌표 absolute positioning) */}
-      {showTooltip && (
-        <div className="item-tooltip">
+      {/* 툴팁 (뷰포트 기준 고정 좌표) */}
+      {showTooltip && tooltipPosition && (
+        <div
+          className="item-tooltip floating-tooltip"
+          style={{
+            left: tooltipPosition.x,
+            top: tooltipPosition.y
+          }}
+        >
           <div className="tooltip-header">
             <span className="tooltip-icon">{item.icon}</span>
             <span className="tooltip-title">{item.name}</span>
@@ -123,7 +152,13 @@ export function ItemCard({ item, count, onSell, canSell }) {
 
       {/* 판매 팝업 */}
       {showSellPopup && popupPosition && (
-        <div className="sell-popup">
+        <div
+          className="sell-popup floating-popup"
+          style={{
+            left: popupPosition.x,
+            top: popupPosition.y
+          }}
+        >
           <div className="sell-popup-content">
             <div className="sell-popup-title">
               {item.icon} {item.name}

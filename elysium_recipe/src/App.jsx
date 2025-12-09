@@ -125,7 +125,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 lab-ambient">
       {/* 합성 애니메이션 모달 */}
       {synthesisResult && (
         <SynthesisAnimationModal
