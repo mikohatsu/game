@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameState } from './hooks/useGameState';
+import { materials } from './data/materials';
 import { IntroScreen } from './components/IntroScreen';
 import { TutorialModal } from './components/TutorialModal';
 import { SynthesisAnimationModal } from './components/SynthesisAnimationModal';
@@ -97,6 +98,27 @@ function App() {
     }
   };
 
+  const handleBulkBuy = (items) => {
+    if (!items || items.length === 0) return false;
+
+    const totalCost = items.reduce((sum, { id, quantity }) => {
+      const mat = materials.find(m => m.id === id);
+      return sum + (mat?.basePrice || 0) * quantity;
+    }, 0);
+
+    if (gameState.gold < totalCost) {
+      setMessage({ type: 'error', text: '골드가 부족합니다!' });
+      return false;
+    }
+
+    items.forEach(({ id, quantity }) => {
+      actions.buyMaterial(id, quantity);
+    });
+
+    setMessage({ type: 'success', text: `총 ${totalCost}G 어치 구매 완료!` });
+    return true;
+  };
+
   const handleExploration = () => {
     const result = actions.performExploration();
     if (result.success && result.type !== 'fail') {
@@ -185,7 +207,11 @@ function App() {
         )}
 
         {currentTab === 'shop' && (
-          <Shop gameState={gameState} onBuyMaterial={handleBuyMaterial} />
+          <Shop
+            gameState={gameState}
+            onBuyMaterial={handleBuyMaterial}
+            onBulkBuy={handleBulkBuy}
+          />
         )}
 
         {currentTab === 'archive' && (

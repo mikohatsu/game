@@ -1,22 +1,22 @@
+const tierClassMap = {
+  1: 'tome-tier-1',
+  2: 'tome-tier-2',
+  3: 'tome-tier-3',
+  4: 'tome-tier-4',
+  5: 'tome-tier-5',
+};
+
 export function RecipeCard({ recipe, onViewDetails }) {
+  const tierClass = tierClassMap[recipe.tier] || 'tome-tier-1';
+
   return (
-    <div className="relic-panel">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-2xl">{recipe.icon}</span>
-        <div>
-          <div className="font-bold">{recipe.name}</div>
-          <div className="text-xs text-gray-400">Tier {recipe.tier}</div>
-        </div>
+    <div className={`tome-card ${tierClass}`} onClick={onViewDetails}>
+      <div className="tome-icon">📖</div>
+      <div className="tome-info">
+        <div className="tome-name">{recipe.name}</div>
+        <div className="tome-tier-label">Tier {recipe.tier}</div>
       </div>
-      <div className="relic-divider" />
-      {onViewDetails && (
-        <button
-          onClick={onViewDetails}
-          className="btn-secondary w-full text-xs"
-        >
-          단서 보기
-        </button>
-      )}
+      <div className="tome-arrow">→</div>
     </div>
   );
 }

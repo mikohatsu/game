@@ -2,45 +2,20 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 export function ItemCard({ item, count, onSell, canSell }) {
   const [showTooltip, setShowTooltip] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState(null);
   const [showSellPopup, setShowSellPopup] = useState(false);
-  const [popupPosition, setPopupPosition] = useState(null);
   const cardRef = useRef(null);
-
-  const getAnchorPosition = useCallback(() => {
-    if (!cardRef.current) return null;
-    const rect = cardRef.current.getBoundingClientRect();
-    return {
-      x: rect.left + (rect.width / 2),
-      y: rect.top
-    };
-  }, []);
-
-  const getPopupAnchor = useCallback(() => {
-    if (!cardRef.current) return null;
-    const rect = cardRef.current.getBoundingClientRect();
-    return {
-      x: rect.left + (rect.width / 2),
-      y: rect.top + (rect.height / 2)
-    };
-  }, []);
 
   const handleMouseEnter = () => {
     setShowTooltip(true);
-    const anchor = getAnchorPosition();
-    if (anchor) setTooltipPosition(anchor);
   };
 
   const handleMouseLeave = () => {
     setShowTooltip(false);
-    setTooltipPosition(null);
   };
 
   const handleClick = (e) => {
     if (canSell && onSell) {
       e.stopPropagation();
-      const anchor = getPopupAnchor();
-      setPopupPosition(anchor || { x: e.clientX, y: e.clientY });
       setShowSellPopup((prev) => !prev);
     }
   };
@@ -55,44 +30,6 @@ export function ItemCard({ item, count, onSell, canSell }) {
     e.stopPropagation();
     setShowSellPopup(false);
   };
-
-  useEffect(() => {
-    if (!showTooltip) return;
-
-    const handleReposition = () => {
-      const anchor = getAnchorPosition();
-      if (anchor) setTooltipPosition(anchor);
-    };
-
-    handleReposition();
-
-    window.addEventListener('scroll', handleReposition, true);
-    window.addEventListener('resize', handleReposition);
-
-    return () => {
-      window.removeEventListener('scroll', handleReposition, true);
-      window.removeEventListener('resize', handleReposition);
-    };
-  }, [getAnchorPosition, showTooltip]);
-
-  useEffect(() => {
-    if (!showSellPopup) return;
-
-    const handleReposition = () => {
-      const anchor = getPopupAnchor();
-      if (anchor) setPopupPosition(anchor);
-    };
-
-    handleReposition();
-
-    window.addEventListener('scroll', handleReposition, true);
-    window.addEventListener('resize', handleReposition);
-
-    return () => {
-      window.removeEventListener('scroll', handleReposition, true);
-      window.removeEventListener('resize', handleReposition);
-    };
-  }, [getPopupAnchor, showSellPopup]);
 
   // 판매 단가 (tier 기반)
   const getSellPrice = () => {
@@ -122,14 +59,8 @@ export function ItemCard({ item, count, onSell, canSell }) {
       </div>
 
       {/* 툴팁 (뷰포트 기준 고정 좌표) */}
-      {showTooltip && tooltipPosition && (
-        <div
-          className="item-tooltip floating-tooltip"
-          style={{
-            left: tooltipPosition.x,
-            top: tooltipPosition.y - 12
-          }}
-        >
+      {showTooltip && (
+        <div className="item-tooltip floating-tooltip">
           <div className="tooltip-header">
             <span className="tooltip-icon">{item.icon}</span>
             <span className="tooltip-title">{item.name}</span>
@@ -151,14 +82,8 @@ export function ItemCard({ item, count, onSell, canSell }) {
       )}
 
       {/* 판매 팝업 */}
-      {showSellPopup && popupPosition && (
-        <div
-          className="sell-popup floating-popup"
-          style={{
-            left: popupPosition.x,
-            top: popupPosition.y
-          }}
-        >
+      {showSellPopup && (
+        <div className="sell-popup floating-popup">
           <div className="sell-popup-content">
             <div className="sell-popup-title">
               {item.icon} {item.name}

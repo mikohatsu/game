@@ -8,11 +8,11 @@ export function TabNavigation({ currentTab, onTabChange, onShowTutorial, onEndDa
   ];
 
   return (
-    <div className="tab-rail">
-      <div className="flex gap-2 flex-wrap items-center">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
+      <div className="tab-rail">
+        <div className="flex gap-2 flex-wrap items-center">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={currentTab === tab.id ? 'btn-primary' : 'btn-secondary'}
           >
@@ -29,7 +29,7 @@ export function TabNavigation({ currentTab, onTabChange, onShowTutorial, onEndDa
         </button>
       </div>
       <div className="tab-rail-hint">
-        <span className="hint-dot" /> 잊힌 단말의 룬 버튼을 눌러 다른 공간으로 이동하세요.
+        <span className="hint-dot" /> 탭 버튼으로 다른 공간으로 이동하세요.
       </div>
     </div>
   );

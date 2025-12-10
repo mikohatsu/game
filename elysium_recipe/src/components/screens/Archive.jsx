@@ -42,7 +42,7 @@ export function Archive({ gameState, onExploration, selectedRecipe, onSelectReci
         {/* 발견한 레시피 목록 */}
         <div>
           <h3 className="text-lg font-bold mb-3">발견한 레시피</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="tome-grid">
             {discoveredRecipes.map(recipe => (
               <RecipeCard
                 key={recipe.id}
@@ -50,6 +50,11 @@ export function Archive({ gameState, onExploration, selectedRecipe, onSelectReci
                 onViewDetails={() => onSelectRecipe(recipe)}
               />
             ))}
+            {discoveredRecipes.length === 0 && (
+              <div className="text-sm text-gray-500 text-center py-6">
+                아직 발견한 레시피가 없습니다.
+              </div>
+            )}
           </div>
         </div>
       </div>

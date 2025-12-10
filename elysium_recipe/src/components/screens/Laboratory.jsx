@@ -1,8 +1,10 @@
-import { ParameterSlider } from '../ui/ParameterSlider';
 import { ItemCard } from '../ui/ItemCard';
 import { materials } from '../../data/materials';
 import { recipes } from '../../data/recipes';
 import { mutations } from '../../data/mutations';
+import { ThermometerControl } from '../ui/ThermometerControl';
+import { PressureGaugeControl } from '../ui/PressureGaugeControl';
+import { ConcentrationVial } from '../ui/ConcentrationVial';
 
 export function Laboratory({
   gameState,
@@ -152,9 +154,9 @@ export function Laboratory({
         </div>
 
         {/* 파라미터 조절 */}
-        <div className="space-y-4 pt-4 border-t border-gray-700">
-          <ParameterSlider
-            label="온도 (Temperature)"
+        <div className="lab-control-grid">
+          <ThermometerControl
+            label="온도"
             value={temperature}
             min={0}
             max={1000}
@@ -162,8 +164,8 @@ export function Laboratory({
             unit="°C"
             onChange={onTemperatureChange}
           />
-          <ParameterSlider
-            label="압력 (Pressure)"
+          <PressureGaugeControl
+            label="압력"
             value={pressure}
             min={0.1}
             max={10}
@@ -171,8 +173,8 @@ export function Laboratory({
             unit=" atm"
             onChange={onPressureChange}
           />
-          <ParameterSlider
-            label="농도 (Concentration)"
+          <ConcentrationVial
+            label="농도"
             value={concentration}
             min={0}
             max={100}
