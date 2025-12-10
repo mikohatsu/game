@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Instrument Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px;
+            border-radius: 50%; background: currentColor;
+            cursor: pointer; margin-top: -4px;
+        }
+        /* 드래그 중 텍스트 선택 방지 */
+        .no-select { user-select: none; -webkit-user-select: none; }
+    </style>
+</head>
+<body class="bg-slate-100">
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
+
+        // 🌡️ 온도계 (기존과 동일)
+        const Thermometer = ({ value }) => {
+            const min = -10, max = 60;
+            const percentage = Math.min(Math.max(((value - min) / (max - min)) * 100, 0), 100);
+
+            return (
+                <div className="flex flex-col items-center gap-4 no-select">
+                    <div className="relative w-16 h-80 bg-gray-200 rounded-full border-4 border-gray-300 shadow-xl p-1 box-border">
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent z-20 pointer-events-none"></div>
+                        <div className="absolute right-2 top-4 bottom-16 flex flex-col justify-between text-[10px] text-gray-400 font-mono z-0">
+                            <span>{max}°</span><span>•</span><span>•</span><span>•</span><span>{min}°</span>
+                        </div>
+                        <div className="w-full h-[calc(100%-3rem)] bg-gray-100 rounded-t-full relative mx-auto overflow-hidden">
+                            <div className="absolute bottom-0 w-full bg-red-500 transition-all duration-300 ease-out shadow-[0_0_10px_rgba(239,68,68,0.6)]" style={{ height: `${percentage}%` }}>
+                                <div className="w-full h-1 bg-white/40"></div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-12 h-12 bg-red-500 rounded-full shadow-inner border-4 border-gray-100 z-10 flex items-center justify-center">
+                            <div className="w-4 h-4 bg-white/30 rounded-full blur-[2px] absolute top-2 left-2"></div>
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <span className="text-xl font-bold text-gray-700">{value}°C</span>
+                    </div>
+                </div>
+            );
+        };
+
+        // ⏱️ 인터랙티브 압력계 (수정됨)
+        const PressureGauge = ({ value, onChange }) => {
+            const gaugeRef = useRef(null);
+            const [isDragging, setIsDragging] = useState(false);
+
+            // 각도 계산 상수
+            const MIN_ANGLE = -120; // 8시 방향
+            const MAX_ANGLE = 120;  // 4시 방향
+            const ANGLE_RANGE = MAX_ANGLE - MIN_ANGLE;
+
+            // 값 -> 각도 변환
+            const currentAngle = MIN_ANGLE + ((value / 100) * ANGLE_RANGE);
+
+            // 마우스/터치 좌표를 값(0~100)으로 변환하는 함수
+            const calculateValueFromEvent = (e) => {
+                if (!gaugeRef.current) return;
+                
+                const rect = gaugeRef.current.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                // 마우스/터치 위치 처리
+                const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+                // atan2로 각도 계산 (라디안 -> 도)
+                // -90도를 해주는 이유는 atan2의 0도가 3시 방향이기 때문 (우리는 12시 기준 보정)
+                let angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI) + 90;
+
+                // 각도 보정 (atan2의 결과값 점프 구간 보정)
+                if (angle > 180) angle -= 360; 
+
+                // 제한 범위 내로 클램핑 (바늘이 휙 돌아가지 않게)
+                // 하단 빈 공간(대략 130도 ~ -130도 사이의 아래쪽)에 마우스가 있으면 무시하거나 가까운 쪽으로 붙임
+                if (angle < MIN_ANGLE) angle = MIN_ANGLE;
+                if (angle > MAX_ANGLE) angle = MAX_ANGLE;
+
+                // 각도를 0~100 값으로 역산
+                const newValue = Math.round(((angle - MIN_ANGLE) / ANGLE_RANGE) * 100);
+                
+                // 0과 100 사이로 안전하게 자름
+                const clampedValue = Math.min(Math.max(newValue, 0), 100);
+                
+                onChange(clampedValue);
+            };
+
+            const handleMouseDown = (e) => {
+                setIsDragging(true);
+                calculateValueFromEvent(e);
+            };
+
+            useEffect(() => {
+                const handleMouseMove = (e) => {
+                    if (isDragging) {
+                        calculateValueFromEvent(e);
+                    }
+                };
+                const handleMouseUp = () => setIsDragging(false);
+
+                if (isDragging) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    window.addEventListener('touchmove', handleMouseMove);
+                    window.addEventListener('touchend', handleMouseUp);
+                }
+
+                return () => {
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    window.removeEventListener('mouseup', handleMouseUp);
+                    window.removeEventListener('touchmove', handleMouseMove);
+                    window.removeEventListener('touchend', handleMouseUp);
+                };
+            }, [isDragging]);
+
+
+            return (
+                <div className="flex flex-col items-center gap-4 no-select">
+                    {/* 게이지 전체 컨테이너 + 마우스 이벤트 */}
+                    <div 
+                        ref={gaugeRef}
+                        onMouseDown={handleMouseDown}
+                        onTouchStart={handleMouseDown}
+                        className="relative w-64 h-64 rounded-full bg-gradient-to-br from-gray-200 to-gray-400 p-2 shadow-2xl border border-gray-500 cursor-pointer active:scale-105 transition-transform"
+                        title="Drag to change pressure"
+                    >
+                        <div className="w-full h-full rounded-full bg-white relative shadow-inner flex items-center justify-center overflow-hidden">
+                            
+                            {/* 눈금 */}
+                            {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((tick, i) => {
+                                const tickAngle = -120 + (i * 24);
+                                return (
+                                    <div 
+                                        key={i}
+                                        className="absolute w-full h-full text-center"
+                                        style={{ transform: `rotate(${tickAngle}deg)` }}
+                                    >
+                                        <div className="mx-auto w-[2px] h-3 bg-gray-400 mt-2"></div>
+                                        {tick % 20 === 0 && (
+                                            <span className="block mt-1 text-xs font-bold text-gray-500" style={{ transform: `rotate(${-tickAngle}deg)` }}>
+                                                {tick}
+                                            </span>
+                                        )}
+                                    </div>
+                                )
+                            })}
+
+                            {/* 색상 띠 (Conic Gradient 수정됨) */}
+                            {/* CSS conic-gradient는 12시(0deg) 기준 시계방향. 
+                                우리 게이지는 -120도(8시) 시작 -> +120도(4시) 끝. 총 240도.
+                                초록(0~60%), 노랑(60~80%), 빨강(80~100%)
+                                시작점 조정(from 240deg)로 8시 방향을 0으로 맞춤
+                            */}
+                            <div 
+                                className="absolute inset-5 rounded-full opacity-20 pointer-events-none"
+                                style={{
+                                    background: `conic-gradient(from 240deg, 
+                                        lime 0deg, 
+                                        lime 144deg, 
+                                        yellow 144deg, 
+                                        yellow 192deg, 
+                                        red 192deg, 
+                                        red 240deg, 
+                                        transparent 240deg)`
+                                }}
+                            ></div>
+                            {/* 내부 원 가리개 (도넛 모양 만들기) */}
+                            <div className="absolute inset-10 bg-white rounded-full shadow-sm z-0"></div>
+
+                            {/* 중앙 텍스트 */}
+                            <div className="absolute top-2/3 text-center z-10 pointer-events-none">
+                                <span className={`text-2xl font-bold font-mono ${value > 80 ? 'text-red-600 animate-pulse' : 'text-slate-800'}`}>
+                                    {value}
+                                </span>
+                                <span className="text-xs block text-slate-500">PSI</span>
+                            </div>
+
+                            {/* 📌 바늘 (위치 및 회전축 교정됨) */}
+                            <div 
+                                className="absolute z-20 pointer-events-none"
+                                style={{
+                                    // 중앙 정렬을 위한 핵심:
+                                    top: '50%', left: '50%',
+                                    width: '4px', height: '45%', // 바늘 길이 (반지름의 90% 정도)
+                                    backgroundColor: '#DC2626',
+                                    borderRadius: '4px 4px 0 0',
+                                    // 회전축을 바늘의 '맨 아래쪽(bottom)'으로 설정
+                                    transformOrigin: 'bottom center', 
+                                    // 초기 위치: 바늘 아래쪽이 원점(50%,50%)에 오도록 위로 이동(-100%) + 왼쪽으로 이동(-50%)
+                                    // 그리고 회전 적용
+                                    transform: `translate(-50%, -100%) rotate(${currentAngle}deg)`,
+                                    transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                                }}
+                            ></div>
+                            
+                            {/* 바늘 캡 (중앙 원) */}
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 bg-gray-800 rounded-full border-2 border-gray-300 z-30 shadow-md pointer-events-none"></div>
+                        </div>
+                    </div>
+                    <div className="text-center">
+                        <span className="text-xl font-bold text-gray-700">{value} PSI</span>
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [temp, setTemp] = useState(24);
+            const [pressure, setPressure] = useState(45);
+
+            return (
+                <div className="min-h-screen flex flex-col items-center justify-center p-8 font-sans bg-slate-100 select-none">
+                    <h1 className="text-3xl font-bold text-slate-700 mb-12">Control Panel</h1>
+
+                    <div className="flex flex-wrap gap-16 items-end justify-center mb-16 p-8 bg-white rounded-3xl shadow-xl border border-slate-200">
+                        <Thermometer value={temp} />
+                        {/* 압력계에 onChange 핸들러 전달 */}
+                        <PressureGauge value={pressure} onChange={setPressure} />
+                    </div>
+
+                    <div className="w-full max-w-lg bg-white p-6 rounded-xl shadow-lg border border-slate-200">
+                        <h3 className="text-lg font-semibold text-slate-600 mb-4 border-b pb-2">Manual Sliders</h3>
+                        <div className="mb-6">
+                            <div className="flex justify-between mb-2">
+                                <label className="text-sm font-medium text-slate-600">Temperature</label>
+                                <span className="text-sm font-bold text-red-500">{temp}°C</span>
+                            </div>
+                            <input type="range" min="-10" max="60" value={temp} onChange={(e) => setTemp(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer text-red-500" />
+                        </div>
+                        <div>
+                            <div className="flex justify-between mb-2">
+                                <label className="text-sm font-medium text-slate-600">Pressure</label>
+                                <span className="text-sm font-bold text-blue-600">{pressure} PSI</span>
+                            </div>
+                            <input type="range" min="0" max="100" value={pressure} onChange={(e) => setPressure(Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer text-blue-600" />
+                        </div>
+                    </div>
+                    <p className="text-slate-400 mt-8 text-sm">💡 Tip: You can now drag the Pressure Gauge needle directly!</p>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
