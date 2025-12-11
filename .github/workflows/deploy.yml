@@ -56,7 +56,7 @@ jobs:
           cp -r junk_beat/dist/* deploy/junk_beat/
           cp -r elysium_recipe/dist/* deploy/elysium_recipe/
           cp index.html deploy/
-          cp -r chess_arena crafters_forge neo_junk_market spaceship_engineer the_slient_council deploy/
+          cp -r chess_arena crafters_forge neo_junk_market spaceship_engineer the_slient_council project_drone deploy/
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
