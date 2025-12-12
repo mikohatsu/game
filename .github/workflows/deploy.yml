@@ -47,14 +47,34 @@ jobs:
         working-directory: ./elysium_recipe
         run: npm run build
 
+      - name: Install dependencies (drone_defiance)
+        working-directory: ./drone_defiance
+        run: npm ci
+
+      - name: Build (drone_defiance)
+        working-directory: ./drone_defiance
+        run: npm run build
+
+      - name: Install dependencies (neon_gambler)
+        working-directory: ./neon_gambler
+        run: npm ci
+
+      - name: Build (neon_gambler)
+        working-directory: ./neon_gambler
+        run: npm run build
+
       - name: Prepare deployment directory
         run: |
           mkdir -p deploy/text_dungeon
           mkdir -p deploy/junk_beat
           mkdir -p deploy/elysium_recipe
+          mkdir -p deploy/drone_defiance/dist
+          mkdir -p deploy/neon_gambler/dist
           cp -r text_dungeon_react/dist/* deploy/text_dungeon/
           cp -r junk_beat/dist/* deploy/junk_beat/
           cp -r elysium_recipe/dist/* deploy/elysium_recipe/
+          cp -r drone_defiance/dist/* deploy/drone_defiance/dist/
+          cp -r neon_gambler/dist/* deploy/neon_gambler/dist/
           cp index.html deploy/
           cp -r chess_arena crafters_forge neo_junk_market spaceship_engineer the_slient_council project_drone deploy/
 
