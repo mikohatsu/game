@@ -67,6 +67,10 @@ jobs:
         working-directory: ./isekai-streamer-hero
         run: npm ci
 
+      - name: Create .env.local for isekai-streamer-hero
+        working-directory: ./isekai-streamer-hero
+        run: echo "GEMINI_API_KEY=AIzaSyDW0Vw4X9WZGJvBC4JPW7QPS2kR9dhGefs" > .env.local
+
       - name: Build (이세계 스트리머 용사)
         working-directory: ./isekai-streamer-hero
         run: npm run build
