@@ -96,6 +96,7 @@ export interface GameState {
   // Game Flow
   isGameStarted: boolean;
   startGame: (name: string) => void;
+  hardResetGame: () => Promise<void>;
   activateDevMode: () => void;
 
   // Ranking

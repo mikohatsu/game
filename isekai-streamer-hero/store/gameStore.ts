@@ -1,7 +1,8 @@
+
 import { create } from 'zustand';
 import { GameState, Upgrade, Mission, Ally, Ranker } from '../types';
 import { INITIAL_UPGRADES, STORY_ARCS, CHAT_MESSAGES_IDLE, CHAT_USERS, CHAT_COLORS, RANKER_NAMES } from '../constants';
-import { generateMonsterImage, generateStageBackground, generateAllyImage } from '../services/geminiService';
+import { generateMonsterImage, generateStageBackground, generateAllyImage, clearImageCache } from '../services/geminiService';
 
 const getInitialMonster = () => ({
   currentHp: 200,
@@ -48,11 +49,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setReincarnationModal: (isOpen) => set({ isReincarnationModalOpen: isOpen }),
 
   startGame: (name: string) => {
+    localStorage.setItem('isekai_streamer_name', name);
     set(state => ({
         isGameStarted: true,
         player: { ...state.player, streamerName: name || '이세계 용사' }
     }));
     get().addChatMessage(`🎬 [시스템] '${name}'님의 방송이 시작되었습니다!`, "시스템");
+  },
+
+  hardResetGame: async () => {
+    // 1. Clear LocalStorage Name
+    localStorage.removeItem('isekai_streamer_name');
+    
+    // 2. Clear Image Cache from IndexedDB
+    await clearImageCache();
+    
+    // 3. Reload Page to reset all in-memory state securely
+    window.location.reload();
   },
 
   activateDevMode: () => {
